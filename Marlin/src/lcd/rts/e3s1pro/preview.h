@@ -66,5 +66,5 @@
   bool gcodePicDataRead(unsigned long picLenth, char isDisplay, unsigned long jpgAddr);
   char gcodePicExistjudge(char *fileName, unsigned int targitPicAddr, const char targitPicFormat, const char targitPicResolution);
   char gcodePicDataSendToDwin(char *fileName, unsigned int jpgAddr, unsigned char jpgFormat, unsigned char jpgResolution);
-  void gcodePicDispalyOnOff(unsigned int jpgAddr, bool onoff);
+  void gcodePicDispalyOnOff(unsigned int jpgAddr, bool showGcodePreview);
 #endif

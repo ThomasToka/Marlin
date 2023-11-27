@@ -102,7 +102,15 @@ void DWIN_DisplayJpeg(unsigned long addr, unsigned long vp)
 
   dwin_uart_write(buf, 10);
 }
-// 发送jpg图片整包数据
+
+
+/**
+ * Sends JPEG data to a specified address.
+ *
+ * @param jpeg Pointer to the JPEG data.
+ * @param size The size of the JPEG data.
+ * @param jpgAddr The address to send the JPEG data to.
+ */
 void DWIN_SendJpegDate(char *jpeg, unsigned long size, unsigned long jpgAddr)
 {
   uint32_t MS = millis();
@@ -119,7 +127,7 @@ void DWIN_SendJpegDate(char *jpeg, unsigned long size, unsigned long jpgAddr)
     memcpy(buf, &jpeg[i * JPG_BYTES_PER_FRAME], JPG_BYTES_PER_FRAME);
     hal.watchdog_refresh();
 
-    // 向指定地址发送图片数据
+    // Send image data to the specified address
     RTS_SendJpegDate(buf, (jpgAddr + (JPG_WORD_PER_FRAME * i)), 0x82);
 
     if (ENABLED(DWIN_DEBUG))
@@ -132,41 +140,41 @@ void DWIN_SendJpegDate(char *jpeg, unsigned long size, unsigned long jpgAddr)
       }
     }
 
-// dwin转大彩、dwin的7寸屏，发送预览图一帧数据后，没有返回值
-// 所以异常先不进行判断，
-#define CMD_TAILA 0x03824F4B // 帧尾(当前对4.3寸的dwin屏有效)
+// Dwin to color, Dwin's 7-inch screen, after sending a frame of preview image, there is no return value
+// So don't judge the exception first
+#define CMD_TAILA 0x03824F4B // Frame tail (currently effective for 4.3 inch dwin screen)
     uint8_t receivedbyte = 0;
-    uint8_t cmd_pos = 0;    // 当前指令指针状态
-    uint32_t cmd_state = 0; // 队列帧尾检测状态
+    uint8_t cmd_pos = 0;    // Current instruction pointer state
+    uint32_t cmd_state = 0; // Queue frame tail detection status
     char buffer[20] = {0};
     MS = millis();
     while (1)
     {
       if (LCDSERIAL.available())
       {
-        // 取一个数据
+        // Take one data
         receivedbyte = LCDSERIAL.read();
         // SERIAL_ECHO_MSG("receivedbyte = ", receivedbyte);
-        if (cmd_pos == 0 && receivedbyte != 0x5A) // 指令的第一个字节必须是帧头
+        if (cmd_pos == 0 && receivedbyte != 0x5A) // The first byte of the instruction must be the frame header
         {
           continue;
         }
 
         if (cmd_pos < 20)
-          buffer[cmd_pos++] = receivedbyte; // 防止溢出
+          buffer[cmd_pos++] = receivedbyte; // Prevent Overflow
         else
           break;
 
-        cmd_state = ((cmd_state << 8) | receivedbyte); // 拼接最后4字节，组成最后一个32位整数
+        cmd_state = ((cmd_state << 8) | receivedbyte); // Concatenate the last 4 bytes to form the last 32-bit integer
 
-        // 帧尾判断
+        // Frame tail judgment
         if (cmd_state == CMD_TAILA)
         {
           break;
         }
       }
       if (millis() - MS >= 25)
-      { // 根据数据手册，延时20ms，有概率出现刷不出预览图的现象!!!
+      { // According to the data manual, delay 20ms, there is a probability that the preview image cannot be brushed out!!!
         //   PRINT_LOG("more than 25ms");
         break;
       }
@@ -179,7 +187,7 @@ void DWIN_SendJpegDate(char *jpeg, unsigned long size, unsigned long jpgAddr)
     memcpy(buf, &jpeg[i * JPG_BYTES_PER_FRAME], (jpgSize - i * JPG_BYTES_PER_FRAME));
     hal.watchdog_refresh();
 
-    // 向指定地址发送图片数据
+    // Send image data to the specified address
     RTS_SendJpegDate(buf, (jpgAddr + (JPG_WORD_PER_FRAME * i)), 0x82);
 
     if (ENABLED(DWIN_DEBUG))
@@ -191,7 +199,7 @@ void DWIN_SendJpegDate(char *jpeg, unsigned long size, unsigned long jpgAddr)
         // if ((j+1) % 8 == 0) SERIAL_ECHO("\r\n");
       }
     }
-    delay(25); // 根据数据手册，延时20ms，有概率出现刷不出预览图的现象!!!
+    delay(25); // According to the data manual, delay 20ms, there is a chance of not being able to display the preview image!!!
   }
 }
 
