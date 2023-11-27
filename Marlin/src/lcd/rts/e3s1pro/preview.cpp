@@ -36,9 +36,9 @@ DwinBrightness_t printBri; // 预览图结构体
 #define USER_LOGIC_DEUBG 0
 
 #ifdef LCD_SERIAL_PORT
-  #define LCDSERIAL LCD_SERIAL
+      #define LCDSERIAL LCD_SERIAL
 #elif SERIAL_PORT_2
-  #define LCDSERIAL MYSERIAL2
+      #define LCDSERIAL MYSERIAL2
 #endif
 
 /**
@@ -108,7 +108,7 @@ void DWIN_SendJpegDate(char *jpeg, unsigned long size, unsigned long jpgAddr)
 
     char buf[JPG_BYTES_PER_FRAME];
     int i,j;
-   
+
     for (i = 0; i < jpgSize / JPG_BYTES_PER_FRAME; i++) {
       // delay(20);
       //memset(buf, 0, JPG_BYTES_PER_FRAME);
@@ -125,7 +125,7 @@ void DWIN_SendJpegDate(char *jpeg, unsigned long size, unsigned long jpgAddr)
             //if ((j+1) % 8 == 0) SERIAL_ECHO("\r\n");
         }
       }
-      
+
       // dwin转大彩、dwin的7寸屏，发送预览图一帧数据后，没有返回值
       // 所以异常先不进行判断，
       #define CMD_TAILA    0x03824F4B      // 帧尾(当前对4.3寸的dwin屏有效)
@@ -146,7 +146,7 @@ void DWIN_SendJpegDate(char *jpeg, unsigned long size, unsigned long jpgAddr)
               continue;
           }
 
-          if(cmd_pos < 20) 
+          if(cmd_pos < 20)
               buffer[cmd_pos++] = receivedbyte;           //防止溢出
           else
               break;
@@ -162,7 +162,7 @@ void DWIN_SendJpegDate(char *jpeg, unsigned long size, unsigned long jpgAddr)
         if (millis() - MS >= 25) {	// 根据数据手册，延时20ms，有概率出现刷不出预览图的现象!!!
         //   PRINT_LOG("more than 25ms");
           break;
-        } 
+        }
       }
 
     }
@@ -201,7 +201,7 @@ void DWIN_SendJpegDate(char *jpeg, unsigned long size, unsigned long jpgAddr)
  *                true -- 清除历史数据 （“base64_out”，“deCodeBase64Cnt”），
  *                false -- 不动作
  */
-bool gcodePicGetDataFormBase64(char * buf, unsigned long picLen, bool resetFlag)
+bool gcodePicGetDataFromBase64(char * buf, unsigned long picLen, bool resetFlag)
 {
     char base64_in[4];          // 保存base64编码的数组
     static unsigned char base64_out[3] = {'0'};   // 保存base64解码的数组
@@ -236,15 +236,15 @@ bool gcodePicGetDataFormBase64(char * buf, unsigned long picLen, bool resetFlag)
         }
 
     }
-    
+
     while(deCodePicLenCnt < picLen)
     {
         char j, ret;
         for ( j = 0; j < 20; j++)
         {
-            ret = card.get();   // 从U盘中获取一个字符 
-            
-            if (ret == ';' || ret == ' ' || ret == '\r' || ret == '\n') 
+            ret = card.get();   // 从U盘中获取一个字符
+
+            if (ret == ';' || ret == ' ' || ret == '\r' || ret == '\n')
                 continue;
 
             base64_in[getBase64Cnt++] = ret;
@@ -252,9 +252,9 @@ bool gcodePicGetDataFormBase64(char * buf, unsigned long picLen, bool resetFlag)
                 getBase64Cnt = 0;
                 break;
             }
-            
+
         }
-        
+
         memset(base64_out, 0, sizeof(base64_out));
         deCodeBase64Cnt = base64_decode(base64_in, 4, base64_out);
         for(int i = deCodeBase64Cnt; i < 3; i++)
@@ -301,23 +301,23 @@ bool gcodePicGetDataFormBase64(char * buf, unsigned long picLen, bool resetFlag)
 bool gcodePicDataRead(unsigned long picLenth, char isDisplay, unsigned long jpgAddr)
 {
     //          96*96-耗时-Ms  200*200-耗时-Ms
-    //  * 2  :      1780        8900 
-    //  * 4  :      940         4490 
-    //  * 8  :      518         2010 
-    //  * 12 :      435         1300 
-    //  * 16 :      420         1130 
-    #define PIN_BUG_LEN_DACAI   2048 
+    //  * 2  :      1780        8900
+    //  * 4  :      940         4490
+    //  * 8  :      518         2010
+    //  * 12 :      435         1300
+    //  * 16 :      420         1130
+    #define PIN_BUG_LEN_DACAI   2048
     #define PIN_BUG_LEN_DWIN    (JPG_BYTES_PER_FRAME * 12)
     #define PIN_DATA_LEN_DWIN   (PIN_BUG_LEN_DWIN / 2)
 
     static char picBuf[PIN_BUG_LEN_DWIN+1]; // 这个取 MXA(PIN_BUG_LEN_DACAI, PIN_BUG_LEN_DWIN)
-    
+
     unsigned long picLen;                   // 图片长度(解码后的长度)
     unsigned long j;
 
-    picLen = picLenth;//(picLenth / 4) * 3; 
+    picLen = picLenth;//(picLenth / 4) * 3;
 
-    gcodePicGetDataFormBase64(picBuf, 0, true);
+    gcodePicGetDataFromBase64(picBuf, 0, true);
 
     // 迪文
     // 先给首地址写0，否则dwin会卡死
@@ -328,7 +328,7 @@ bool gcodePicDataRead(unsigned long picLenth, char isDisplay, unsigned long jpgA
     {
         memset(picBuf, 0, sizeof(picBuf));
         // card.read(picBuf, PIN_BUG_LEN_DWIN);
-        gcodePicGetDataFormBase64(picBuf, PIN_BUG_LEN_DWIN, false);
+        gcodePicGetDataFromBase64(picBuf, PIN_BUG_LEN_DWIN, false);
         rtscheck.RTS_SndData((j % 8) + 1, DOWNLOAD_PREVIEW_VP); //出现加载图片
         // 发送图片数据到指定地址
         if (isDisplay) {
@@ -341,8 +341,8 @@ bool gcodePicDataRead(unsigned long picLenth, char isDisplay, unsigned long jpgA
     if (picLen % PIN_BUG_LEN_DWIN != 0)
     {
         memset(picBuf, 0, sizeof(picBuf));
-        // card.read(picBuf, (picLen - PIN_BUG_LEN_DWIN * j));  
-        gcodePicGetDataFormBase64(picBuf, (picLen - PIN_BUG_LEN_DWIN * j), false);
+        // card.read(picBuf, (picLen - PIN_BUG_LEN_DWIN * j));
+        gcodePicGetDataFromBase64(picBuf, (picLen - PIN_BUG_LEN_DWIN * j), false);
         // 发送图片数据到指定地址
         if (isDisplay) {
             DWIN_SendJpegDate(picBuf, (picLen - PIN_BUG_LEN_DWIN * j), (2 + jpgAddr + PIN_DATA_LEN_DWIN * j));
@@ -356,20 +356,28 @@ bool gcodePicDataRead(unsigned long picLenth, char isDisplay, unsigned long jpgA
     return true;
 }
 
+#if ENABLED(USER_LOGIC_DEUBG)
+    static uint32_t msTest;
+#endif
+
 /**
- * @功能   gcode预览图存在判断
- * @Author Creality
- * @Time   2021-12-01
- * fileName         gcode文件名
- * jpgAddr          显示地址
- * jpgFormat        图片类型（jpg、png）
- * jpgResolution    图片大小
+ * This function checks if a picture file exists in the given format and resolution at the specified address.
+ * It does this by reading data from the file and checking specific details about the picture.
+ *
+ * @param fileName Pointer to the name of the picture file.
+ * @param targetPicAddr The address where the picture is supposed to be located.
+ * @param targetPicFormat The expected format of the picture.
+ * @param targetPicResolution The expected resolution of the picture.
+ *
+ * @return Returns PIC_MISS_ERR if the picture is not found or if it does not meet the required specifications.
+ *         Otherwise, it returns the character read from the file.
+ *
+ * @throws Does not throw any exceptions but returns PIC_MISS_ERR in case of any errors.
  */
-static uint32_t msTest;
-char gcodePicExistjudge(char *fileName, unsigned int targitPicAddr, const char targitPicFormat, const char targitPicResolution)
+char gcodePicExistjudge(char *fileName, unsigned int targetPicAddr, const char targetPicFormat, const char targetPicResolution)
 {
     #define STRING_MAX_LEN      80
-					
+
 	// unsigned char picFormat = PIC_FORMAT_MAX;		// 图片格式
 	unsigned char picResolution = PIC_RESOLITION_MAX;// 图片分辨率
 	unsigned char ret;
@@ -377,7 +385,7 @@ char gcodePicExistjudge(char *fileName, unsigned int targitPicAddr, const char t
     unsigned char strBuf[STRING_MAX_LEN] = {0};
     unsigned char bufIndex = 0;
     // char lCmdBuf[20];
-    char *picMsgP; 
+    char *picMsgP;
 
     char lPicFormar[20];
     char lPicHeder[20];
@@ -386,7 +394,7 @@ char gcodePicExistjudge(char *fileName, unsigned int targitPicAddr, const char t
     unsigned int picStartLine = 0;	// 图片起始行
     unsigned int picEndLine = 0;	// 图片结束行
     unsigned int picHigh = 0;	    // 图片模型高度
-    
+
 
     // 读取一个字符串，以空格隔开
     #define GET_STRING_ON_GCODE()
@@ -405,7 +413,7 @@ char gcodePicExistjudge(char *fileName, unsigned int targitPicAddr, const char t
                     continue;
                 } else{
                     strStartFg = true;
-                }                        
+                }
                 if ((ret == '\r' || ret == '\n') && bufIndex != 0) break;   // 读到换行符，退出
                 strBuf[bufIndex++] = ret;
             }
@@ -427,7 +435,7 @@ char gcodePicExistjudge(char *fileName, unsigned int targitPicAddr, const char t
     GET_STRING_ON_GCODE();
 
     // 2、进行图片的格式判断（jpg、png），如果不符合，直接退出
-    if (targitPicFormat == PIC_FORMAT_JPG) {
+    if (targetPicFormat == PIC_FORMAT_JPG) {
         if (strstr((const char *)strBuf, FORMAT_JPG_HEADER) == NULL) {
             if (strstr((const char *)strBuf, FORMAT_JPG_HEADER_PRUSA) == NULL) {
                 if (strstr((const char *)strBuf, FORMAT_JPG_HEADER_CURA) == NULL) {
@@ -475,10 +483,10 @@ char gcodePicExistjudge(char *fileName, unsigned int targitPicAddr, const char t
     {
         picResolution = PIC_RESOLITION_MAX;
         if (strcmp(picMsgP, RESOLITION_250_250) == 0 || strcmp(picMsgP, RESOLITION_250_250_PRUSA) == 0) {
-            picResolution = PIC_RESOLITION_250_250;            
+            picResolution = PIC_RESOLITION_250_250;
         }
     }
-    
+
 
     // 6、获取图片数据长度
     picMsgP = strtok(NULL, (const char *)" ");
@@ -517,7 +525,7 @@ char gcodePicExistjudge(char *fileName, unsigned int targitPicAddr, const char t
         picHigh = atoi(picMsgP);
     }
 
-    if (ENABLED(USER_LOGIC_DEUBG)) 
+    if (ENABLED(USER_LOGIC_DEUBG))
     {
         SERIAL_ECHO_MSG("lPicFormar = ", lPicFormar);
         SERIAL_ECHO_MSG("lPicHeder = ", lPicHeder);
@@ -527,20 +535,19 @@ char gcodePicExistjudge(char *fileName, unsigned int targitPicAddr, const char t
         SERIAL_ECHO_MSG("picEndLine = ", picEndLine);
         SERIAL_ECHO_MSG("picHigh = ", picHigh);
     }
-    
 
-    if (ENABLED(USER_LOGIC_DEUBG)) 
-    {
-        //SERIAL_ECHOPAIR("\r\n gcode pic time test 1 msTest = ", (millis() - msTest));
-        msTest = millis();
-    }
+
+    #if ENABLED(USER_LOGIC_DEUBG)
+            //SERIAL_ECHOPAIR("\r\n gcode pic time test 1 msTest = ", (millis() - msTest));
+            msTest = millis();
+    #endif
 
     // 从gcode里面读出图片数据，根据选择的是不是预定格式或预定大小图片来判断是否需要发送到屏上
-    
+
     // 判断是否是需要的 分辨率
-    if ( picResolution == targitPicResolution )
+    if ( picResolution == targetPicResolution )
     {
-        gcodePicDataRead(picLen, true, targitPicAddr);
+        gcodePicDataRead(picLen, true, targetPicAddr);
     }
     else
     {
@@ -552,7 +559,7 @@ char gcodePicExistjudge(char *fileName, unsigned int targitPicAddr, const char t
         if ( picLen % 3 == 0 ) {
             targitPicpicLen = picLen / 3 * 4;
         } else {
-            targitPicpicLen = (picLen / 3 + 1) * 4; 
+            targitPicpicLen = (picLen / 3 + 1) * 4;
         }
         uint32_t indexAdd = (targitPicpicLen / 76) * 3 + targitPicpicLen + 10;
         if ( (targitPicpicLen % 76 ) != 0) {
@@ -560,22 +567,23 @@ char gcodePicExistjudge(char *fileName, unsigned int targitPicAddr, const char t
         }
 
         card.setIndex((index1 + indexAdd));
-        if ( ENABLED(USER_LOGIC_DEUBG) ) 
+        if ( ENABLED(USER_LOGIC_DEUBG) )
         {
             //SERIAL_ECHOLNPAIR("\r\n ...old_index1 = ", index1,
             //                  "\r\n ...indexAdd = ", indexAdd);
         }
 
-        if ( picResolution != targitPicResolution )
+        if ( picResolution != targetPicResolution )
             return PIC_RESOLITION_ERR;
         else
             return PIC_FORMAT_ERR;
     }
 
     //card.closefile();
-    if ( ENABLED(USER_LOGIC_DEUBG) ) 
-	    //SERIAL_ECHOPAIR("\r\n gcode pic time test 3 msTest = ", (millis() - msTest));
-    msTest = millis();
+    #if ENABLED(USER_LOGIC_DEUBG)
+    	    //SERIAL_ECHOPAIR("\r\n gcode pic time test 3 msTest = ", (millis() - msTest));
+        msTest = millis();
+    #endif
 	return PIC_OK;
 }
 
@@ -584,7 +592,9 @@ char gcodePicDataSendToDwin(char *fileName, unsigned int jpgAddr, unsigned char 
     char ret;
     char returyCnt = 0;
     card.openFileRead(fileName);
-    msTest = millis();
+    #if ENABLED(USER_LOGIC_DEUBG)
+        msTest = millis();
+    #endif
     while (1)
     {
         ret = gcodePicExistjudge(fileName, jpgAddr, jpgFormat, jpgResolution);
@@ -603,7 +613,7 @@ char gcodePicDataSendToDwin(char *fileName, unsigned int jpgAddr, unsigned char 
             else
                 continue;
         }
-        else 
+        else
         {
             card.closefile();
             return PIC_OK;
@@ -623,7 +633,7 @@ char gcodePicDataSendToDwin(char *fileName, unsigned int jpgAddr, unsigned char 
 void gcodePicDispalyOnOff(unsigned int jpgAddr, bool onoff)
 {
     if (onoff) {
-        rtscheck.RTS_SndData(1, jpgAddr);  
+        rtscheck.RTS_SndData(1, jpgAddr);
     } else {
         rtscheck.RTS_SndData(0, jpgAddr);
     }
@@ -664,5 +674,5 @@ void RefreshBrightnessAtPrint(uint16_t persent)
     printBri.RightDown_Y = BRIGHTNESS_PRINT_LEFT_HIGH_Y + (100 - persent) * BRIGHTNESS_PRINT_HIGH / 100;
 
     DWIN_BrightnessCtrl(printBri);
-    
+
 }
