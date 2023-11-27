@@ -102,7 +102,6 @@ void DWIN_DisplayJpeg(unsigned long addr, unsigned long vp)
   dwin_uart_write(buf, 10);
 }
 
-
 /**
  * Sends JPEG data to a specified address.
  *
@@ -203,28 +202,29 @@ void DWIN_SendJpegDate(char *jpeg, unsigned long size, unsigned long jpgAddr)
 }
 
 /**
- * @功能   从U盘中读取预览图数据并解码
- * @Author Creality
- * @Time   2022-04-13
- * buf          : 用于保存解码后的数据
- * picLen       : 需要的数据长度
- * resetFlag    : 重置数据标志 -- 由于Base64解码后是3的倍数（4个Base64字符解码后是4个字节数据），但是入参‘picLen’不一定是3的倍数。
- *                所以单次调用后，剩余的没有使用到的字节数据保存在“base64_out”，其长度为“deCodeBase64Cnt”
- *                当显示完第一张图片后，显示第二张图时，需要清除一下这两个数据，防止影响第二张图片的显示
- *                true -- 清除历史数据 （“base64_out”，“deCodeBase64Cnt”），
- *                false -- 不动作
+ * Read and decode base64 encoded image data and save it into a buffer.
+ *
+ * @param buf the buffer to save the decoded data
+ * @param picLen the length of the picture data
+ * @param resetFlag a flag indicating whether to reset the data -- Because after Base64 decoding it is a multiple of 3 (4 Base64 characters are decoded into 4 byte data),
+ * but the input parameter 'picLen' may not be a multiple of 3.
+ * So after a single call, the remaining unused byte data is saved in "base64_out", and its length is "deCodeBase64Cnt".
+ * After displaying the first picture, when displaying the second picture,
+ * you need to clear these two data to prevent affecting the display of the second picture.
+ *
+ * @return true if the decoding process is successful, false otherwise
  */
 bool gcodePicGetDataFromBase64(char *buf, unsigned long picLen, bool resetFlag)
 {
-  char base64_in[4];                          // 保存base64编码的数组
-  static unsigned char base64_out[3] = {'0'}; // 保存base64解码的数组
-  int getBase64Cnt = 0;                       // 从U盘获取的，base64编码的数据
-  static int deCodeBase64Cnt = 0;             // 已经解码得了数据
-  unsigned long deCodePicLenCnt = 0;          // 保存已经获取的图片数据
+  char base64_in[4];                          // Save base64 encoded array
+  static unsigned char base64_out[3] = {'0'}; // Save base64 decoded array
+  int getBase64Cnt = 0;                       // Data obtained from the USB flash drive, base64 encoded
+  static int deCodeBase64Cnt = 0;             // Data that has been decoded
+  unsigned long deCodePicLenCnt = 0;          // Save the obtained picture data
   // static char lCmdBuf[100];
   bool getPicEndFlag = false;
 
-  //  清除上次记录
+  //  Clear the last record
   if (resetFlag)
   {
     for (unsigned int i = 0; i < sizeof(base64_out); i++)
@@ -254,7 +254,7 @@ bool gcodePicGetDataFromBase64(char *buf, unsigned long picLen, bool resetFlag)
     char j, ret;
     for (j = 0; j < 20; j++)
     {
-      ret = card.get(); // 从U盘中获取一个字符
+      ret = card.get(); // Get a character from the USB flash drive
 
       if (ret == ';' || ret == ' ' || ret == '\r' || ret == '\n')
         continue;
@@ -271,14 +271,14 @@ bool gcodePicGetDataFromBase64(char *buf, unsigned long picLen, bool resetFlag)
     deCodeBase64Cnt = base64_decode(base64_in, 4, base64_out);
     for (int i = deCodeBase64Cnt; i < 3; i++)
       base64_out[i] = 0;
-    deCodeBase64Cnt = 3; // 这里强制给3，因为始终是4 --> 3 字符
+    deCodeBase64Cnt = 3; // Here is forcibly given 3, because it is always 4 --> 3 characters
 
     int test = deCodeBase64Cnt;
     for (int deCode = 0; deCode < test; deCode++)
     {
       if (deCodePicLenCnt < picLen)
       {
-        // 特殊处理一下末尾字符，找到了FF D9后退出
+        // Special treatment of the end character, exit after finding FF D9
         if (getPicEndFlag)
           buf[deCodePicLenCnt++] = 0;
         else
@@ -315,12 +315,12 @@ bool gcodePicGetDataFromBase64(char *buf, unsigned long picLen, bool resetFlag)
  */
 bool gcodePicDataRead(unsigned long picLenth, char isDisplay, unsigned long jpgAddr)
 {
-//Time consumed in ms: 96*96  200*200
-//  * 2  :             1780   8900
-//  * 4  :             940    4490
-//  * 8  :             518    2010
-//  * 12 :             435    1300
-//  * 16 :             420    1130
+// Time consumed in ms: 96*96  200*200
+//   * 2  :             1780   8900
+//   * 4  :             940    4490
+//   * 8  :             518    2010
+//   * 12 :             435    1300
+//   * 16 :             420    1130
 #define PIN_BUG_LEN_DACAI 2048
 #define PIN_BUG_LEN_DWIN (JPG_BYTES_PER_FRAME * 12)
 #define PIN_DATA_LEN_DWIN (PIN_BUG_LEN_DWIN / 2)
