@@ -637,6 +637,18 @@ char gcodePicExistjudge(char *fileName, unsigned int targetPicAddr, const char t
   return PIC_OK;
 }
 
+/**
+ * Checks if the given picture exists in the gcode and validates its format and resolution.
+ *
+ * @param fileName the name of the file containing the picture
+ * @param jpgAddr the address of the picture in memory
+ * @param jpgFormat the format of the picture
+ * @param jpgResolution the resolution of the picture
+ *
+ * @return the result of the operation: PIC_MISS_ERR if the picture is missing, PIC_OK if the picture is valid
+ *
+ * @throws None
+ */
 char gcodePicDataSendToDwin(char *fileName, unsigned int jpgAddr, unsigned char jpgFormat, unsigned char jpgResolution)
 {
   char ret;
@@ -645,23 +657,24 @@ char gcodePicDataSendToDwin(char *fileName, unsigned int jpgAddr, unsigned char 
 #if ENABLED(USER_LOGIC_DEUBG)
   msTest = millis();
 #endif
+
   while (1)
   {
     ret = gcodePicExistjudge(fileName, jpgAddr, jpgFormat, jpgResolution);
-    if (ret == PIC_MISS_ERR) // 当gcode中没有pic时，直接返回
+    if (ret == PIC_MISS_ERR) // When there is no pic in the gcode, return directly
     {
       card.closefile();
       return PIC_MISS_ERR;
     }
-    else if ((ret == PIC_FORMAT_ERR) || (ret == PIC_RESOLITION_ERR)) // 当格式或大小错误，继续往下判断
+    else if ((ret == PIC_FORMAT_ERR) || (ret == PIC_RESOLITION_ERR)) // When there is a format or size error, continue to judge further
     {
       if (++returyCnt >= 3)
       {
         card.closefile();
         return PIC_MISS_ERR;
       }
-      else
-        continue;
+
+      continue;
     }
     else
     {
@@ -672,16 +685,14 @@ char gcodePicDataSendToDwin(char *fileName, unsigned int jpgAddr, unsigned char 
 }
 
 /**
- * @功能   gcode预览图显示、隐藏
- * @Author Creality
- * @Time   2021-0-27
- * jpgAddr      地址
- * onoff        显示(onoff == true)，隐藏(onoff == false)
- * 显示地址
+ * Toggles the display of a Gcode picture preview.
+ *
+ * @param jpgAddr the address of the Gcode picture
+ * @param showGcodePreview a boolean indicating whether to show the Gcode preview (true==show, false==hide)
  */
-void gcodePicDispalyOnOff(unsigned int jpgAddr, bool onoff)
+void gcodePicDispalyOnOff(unsigned int jpgAddr, bool showGcodePreview)
 {
-  if (onoff)
+  if (showGcodePreview)
   {
     rtscheck.RTS_SndData(1, jpgAddr);
   }
@@ -690,6 +701,7 @@ void gcodePicDispalyOnOff(unsigned int jpgAddr, bool onoff)
     rtscheck.RTS_SndData(0, jpgAddr);
   }
 }
+
 // 亮度控制功能函
 void DWIN_BrightnessCtrl(DwinBrightness_t brightness)
 {
