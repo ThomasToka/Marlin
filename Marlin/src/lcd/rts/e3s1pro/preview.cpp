@@ -305,69 +305,75 @@ bool gcodePicGetDataFromBase64(char *buf, unsigned long picLen, bool resetFlag)
 }
 
 /**
- * @功能   从gcode里面读取jpeg图片显示：1、发送到屏显示；2、让指针跳过这段图片，再去寻找下一张图片
- * @Author Creality
- * @Time   2021-12-01
- * picLenth     : 图片长度(base64编码的长度)
- * isDisplay    : 是否显示该图片
- * jpgAddr      : 显示图片的地址
+ * Reading a JPEG image from gcode: 1. Send it to the screen for display; 2. Let the pointer skip this image and go find the next one.
+ *
+ * @param picLenth The length of the base64 encoded picture.
+ * @param isDisplay Indicates whether to display the picture.
+ * @param jpgAddr The address of the JPEG data.
+ *
+ * @return True if the function executed successfully.
  */
 bool gcodePicDataRead(unsigned long picLenth, char isDisplay, unsigned long jpgAddr)
 {
-//          96*96-耗时-Ms  200*200-耗时-Ms
-//  * 2  :      1780        8900
-//  * 4  :      940         4490
-//  * 8  :      518         2010
-//  * 12 :      435         1300
-//  * 16 :      420         1130
+//Time consumed in ms: 96*96  200*200
+//  * 2  :             1780   8900
+//  * 4  :             940    4490
+//  * 8  :             518    2010
+//  * 12 :             435    1300
+//  * 16 :             420    1130
 #define PIN_BUG_LEN_DACAI 2048
 #define PIN_BUG_LEN_DWIN (JPG_BYTES_PER_FRAME * 12)
 #define PIN_DATA_LEN_DWIN (PIN_BUG_LEN_DWIN / 2)
 
-  static char picBuf[PIN_BUG_LEN_DWIN + 1]; // 这个取 MXA(PIN_BUG_LEN_DACAI, PIN_BUG_LEN_DWIN)
+  static char picBuf[PIN_BUG_LEN_DWIN + 1]; // Take this MAX(PIN_BUG_LEN_DACAI, PIN_BUG_LEN_DWIN)
 
-  unsigned long picLen; // 图片长度(解码后的长度)
+  unsigned long picLen; // Picture length (length after decoding)
   unsigned long j;
 
   picLen = picLenth; //(picLenth / 4) * 3;
 
   gcodePicGetDataFromBase64(picBuf, 0, true);
 
-  // 迪文
-  // 先给首地址写0，否则dwin会卡死
+  // DWIN
+  // First write 0 to the starting address, otherwise DWIN will freeze (or crash).
   DWIN_WriteOneWord(jpgAddr, 0);
 
-  // 开始读取
+  // Start reading
   for (j = 0; j < (picLen / PIN_BUG_LEN_DWIN); j++)
   {
     memset(picBuf, 0, sizeof(picBuf));
     // card.read(picBuf, PIN_BUG_LEN_DWIN);
     gcodePicGetDataFromBase64(picBuf, PIN_BUG_LEN_DWIN, false);
-    rtscheck.RTS_SndData((j % 8) + 1, DOWNLOAD_PREVIEW_VP); // 出现加载图片
-    // 发送图片数据到指定地址
+    rtscheck.RTS_SndData((j % 8) + 1, DOWNLOAD_PREVIEW_VP); // Loading image appears
+    // Send image data to the specified address
     if (isDisplay)
     {
       DWIN_SendJpegDate(picBuf, PIN_BUG_LEN_DWIN, (2 + jpgAddr + PIN_DATA_LEN_DWIN * j));
     }
   }
+
   rtscheck.RTS_SndData(0, DOWNLOAD_PREVIEW_VP);
-  // 剩下的不足240字符的数据处理，根据迪文处理内容
+
+  // Process the remaining data that is less than 240 characters, according to DWIN's processing content
   // watchdog_refresh();
   if (picLen % PIN_BUG_LEN_DWIN != 0)
   {
     memset(picBuf, 0, sizeof(picBuf));
     // card.read(picBuf, (picLen - PIN_BUG_LEN_DWIN * j));
     gcodePicGetDataFromBase64(picBuf, (picLen - PIN_BUG_LEN_DWIN * j), false);
-    // 发送图片数据到指定地址
+    // Send image data to the specified address
     if (isDisplay)
     {
       DWIN_SendJpegDate(picBuf, (picLen - PIN_BUG_LEN_DWIN * j), (2 + jpgAddr + PIN_DATA_LEN_DWIN * j));
     }
   }
+
   // delay(25);
-  // 用于显示jpg图片
+  // Used to display jpg images
   if (isDisplay)
+  {
     DWIN_DisplayJpeg(jpgAddr, picLen);
+  }
 
   return true;
 }
