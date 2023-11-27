@@ -29,7 +29,6 @@
 #define FORMAT_JPG "jpg"
 #define FORMAT_JPG_PRUSA "thumbnail_JPG"
 #define FORMAT_JPG_CURA "thumbnail"
-DwinBrightness_t printBri;                           // 预览图结构体
 #define JPG_BYTES_PER_FRAME 240                      // 每一帧发送的字节数（图片数据）
 #define JPG_WORD_PER_FRAME (JPG_BYTES_PER_FRAME / 2) // 每一帧发送的字数（图片数据）
 #define SizeofDatabuf2 300
@@ -710,40 +709,46 @@ void gcodePicDispalyOnOff(unsigned int jpgAddr, bool showGcodePreview)
   }
 }
 
-// 亮度控制功能函
+/**
+ * Controls the brightness of the DWIN display.
+ *
+ * @param brightness the brightness values for different corners of the display
+ */
 void DWIN_BrightnessCtrl(DwinBrightness_t brightness)
 {
-
   unsigned int buf[10];
 
-  buf[0] = brightness.LeftUp_X; // 亮度
+  buf[0] = brightness.LeftUp_X; // brightness
   buf[1] = brightness.LeftUp_Y;
-  buf[2] = brightness.RightDown_X; // 亮度
+  buf[2] = brightness.RightDown_X; // brightness
   buf[3] = brightness.RightDown_Y;
 
-  // 显示区域修改
+  // Display Area Modification
   DWIN_WriteOneWord(brightness.spAddr, buf[0]);
   DWIN_WriteOneWord(brightness.spAddr + 1, buf[1]);
   DWIN_WriteOneWord(brightness.spAddr + 2, buf[2]);
   DWIN_WriteOneWord(brightness.spAddr + 3, buf[3]);
 
-  // 亮度调节
+  // Brightness Adjustment
   DWIN_WriteOneWord(brightness.addr, brightness.brightness);
 }
-/*
- * [RefreshBrightnessAtPrint :刷新打印中，gcode预览图片的渐变显示]
- * @Author Creality
- * @Time   2021-06-19
+
+/**
+ * Refreshes the display brightness of the G-code preview image during printing.
+ *
+ * @param percent the percentage value to calculate the brightness
  */
-void RefreshBrightnessAtPrint(uint16_t persent)
+void RefreshBrightnessAtPrint(uint16_t percent)
 {
+  DwinBrightness_t printBri;
+
   printBri.brightness = BRIGHTNESS_PRINT;
   printBri.addr = BRIGHTNESS_ADDR_PRINT;
   printBri.spAddr = SP_ADDR_BRIGHTNESS_PRINT + 1;
   printBri.LeftUp_X = BRIGHTNESS_PRINT_LEFT_HIGH_X;
   printBri.LeftUp_Y = BRIGHTNESS_PRINT_LEFT_HIGH_Y;
   printBri.RightDown_X = BRIGHTNESS_PRINT_LEFT_HIGH_X + BRIGHTNESS_PRINT_WIDTH;
-  printBri.RightDown_Y = BRIGHTNESS_PRINT_LEFT_HIGH_Y + (100 - persent) * BRIGHTNESS_PRINT_HIGH / 100;
+  printBri.RightDown_Y = BRIGHTNESS_PRINT_LEFT_HIGH_Y + (100 - percent) * BRIGHTNESS_PRINT_HIGH / 100;
 
   DWIN_BrightnessCtrl(printBri);
 }
