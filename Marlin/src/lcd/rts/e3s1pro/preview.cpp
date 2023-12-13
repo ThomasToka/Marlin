@@ -638,7 +638,6 @@ char gcodePicDataSendToDwin(char *fileName, unsigned int jpgAddr, unsigned char 
 }
 
 /**
-/**
  * Toggles the display of a Gcode picture preview.
  *
  * @param jpgAddr the address of the Gcode picture
