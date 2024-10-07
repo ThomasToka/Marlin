@@ -75,6 +75,10 @@ uint32_t PrintJobRecovery::cmd_sdpos, // = 0
   #include "../module/probe.h"
 #endif
 
+#if ENABLED(SOVOL_SV06_RTS)
+  #include "../lcd/sovol_rts/sovol_rts.h"
+#endif
+
 #if ENABLED(FWRETRACT)
   #include "fwretract.h"
 #endif
@@ -241,6 +245,9 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=POW
     // info.sdpos and info.current_position are pre-filled from the Stepper ISR
 
     info.feedrate = uint16_t(MMS_TO_MMM(feedrate_mm_s));
+    info.feedrate_percentage = feedrate_percentage;
+    COPY(info.flow_percentage, planner.flow_percentage);
+
     info.zraise = zraise;
     info.flag.raised = raised;                      // Was Z raised before power-off?
 
@@ -252,7 +259,7 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=POW
     #if DISABLED(NO_VOLUMETRICS)
       info.flag.volumetric_enabled = parser.volumetric_enabled;
       #if HAS_MULTI_EXTRUDER
-        EXTRUDER_LOOP() info.filament_size[e] = planner.filament_size[e];
+        COPY(info.filament_size, planner.filament_size);
       #else
         if (parser.volumetric_enabled) info.filament_size[0] = planner.filament_size[active_extruder];
       #endif
@@ -310,7 +317,10 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=POW
 
         #if POWER_LOSS_RETRACT_LEN
           // Retract filament now
-          gcode.process_subcommands_now(F("G1 F3000 E-" STRINGIFY(POWER_LOSS_RETRACT_LEN)));
+          const uint16_t old_flow = planner.flow_percentage[active_extruder];
+          planner.set_flow(active_extruder, 100);
+          gcode.process_subcommands_now(F("G1F3000E-" STRINGIFY(POWER_LOSS_RETRACT_LEN)));
+          planner.set_flow(active_extruder, old_flow);
         #endif
 
         #if POWER_LOSS_ZRAISE
@@ -595,8 +605,12 @@ void PrintJobRecovery::resume() {
 
   DEBUG_ECHO_MSG(">>> z_print: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
 
-  // Restore the feedrate
+  // Restore the feedrate and percentage
   PROCESS_SUBCOMMANDS_NOW(TS(F("G1F"), info.feedrate));
+  feedrate_percentage = info.feedrate_percentage;
+
+  // Flowrate percentage
+  EXTRUDER_LOOP() planner.set_flow(e, info.flow_percentage[e]);
 
   // Restore E position with G92.9
   PROCESS_SUBCOMMANDS_NOW(TS(F("G92.9E"), p_float_t(resume_pos.e, 3)));
@@ -614,6 +628,11 @@ void PrintJobRecovery::resume() {
   // Resume the SD file from the last position
   PROCESS_SUBCOMMANDS_NOW(MString<MAX_CMD_SIZE>(F("M23 "), info.sd_filename));
   PROCESS_SUBCOMMANDS_NOW(TS(F("M24S"), resume_sdpos, 'T', info.print_job_elapsed));
+
+  #if ENABLED(SOVOL_SV06_RTS)
+    if (rts.print_state) rts.refreshTime();
+    rts.start_print_flag = false;
+  #endif
 }
 
 #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
@@ -635,7 +654,8 @@ void PrintJobRecovery::resume() {
         }   
         DEBUG_EOL();
 
-        DEBUG_ECHOLNPGM("feedrate: ", info.feedrate);
+        DEBUG_ECHOLN(F("feedrate: "), info.feedrate, F(" x "), info.feedrate_percentage, '%');
+        EXTRUDER_LOOP() DEBUG_ECHOLN('E', e + 1, F(" flow %: "), info.flow_percentage[e]);
 
         DEBUG_ECHOLNPGM("zraise: ", info.zraise, " ", info.flag.raised ? "(before)" : "");
 

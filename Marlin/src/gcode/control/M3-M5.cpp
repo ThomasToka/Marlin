@@ -51,6 +51,7 @@
  *
  * Parameters:
  *  S<power> - Set power. S0 will turn the spindle/laser off.
+ *  O<power> - Set power in PWM units 0-255
  *
  *  If no PWM pin is defined then M3/M4 just turns it on or off.
  *
@@ -103,8 +104,12 @@ void GcodeSuite::M3_M4(const bool is_M4) {
       #if ENABLED(LASER_FEATURE)
         u = laser_device.power16_to_8(v);
       #else
-        u = cutter.menuPower = cutter.unitPower = TERN(LASER_POWER_TRAP, v, cutter.power_to_range(v));
+        u = cutter.menuPower = cutter.unitPower = TERN(LASER_POWER_TRAP, constrain( v, 0, CUTTER_POWER_MAX), cutter.power_to_range(v));
       #endif
+    }
+    else if (parser.seenval('O')) { // pwr in PWM units
+      const float v = parser.value_float();
+      cutter.menuPower = cutter.unitPower = CUTTER_PWM_TO_SPWR(constrain(v, 0, 255));
     }
     else if (cutter.cutter_mode == CUTTER_MODE_STANDARD)
       u = cutter.menuPower = cutter.unitPower = cutter.cpwr_to_upwr(SPEED_POWER_STARTUP);
