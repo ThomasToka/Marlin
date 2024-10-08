@@ -545,10 +545,11 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       {
         RTS_ShowPage(28);
       }
-      else if(recdat.data[0] == 2) //语言选择
+      else if(recdat.data[0] == 2)
       {
-        RTS_ShowPage(65);
-        EEPROM_SAVE_LANGUAGE();
+        RTS_ShowPage(64);
+        //RTS_ShowPage(65);
+        //EEPROM_SAVE_LANGUAGE();
       }
       else if(recdat.data[0] == 3)
       {
@@ -577,8 +578,10 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       }
       else if(recdat.data[0] == 8)
       {
-        settings.save();
-        RTS_ShowPage(21);
+        //settings.save();
+        //RTS_ShowPage(21);
+        RTS_ShowPage(65);
+        EEPROM_SAVE_LANGUAGE();        
       }
       else if(recdat.data[0] == 9)
       {
@@ -784,35 +787,37 @@ void RTSSHOW::RTS_HandleData_Laser(void)
     case StoreMemoryKey:
       if(recdat.data[0] == 1)
       {
-        RTS_ShowPage(37);
+        RTS_ShowPage(34);
       }
       if(recdat.data[0] == 2)
       {
-        queue.enqueue_now_P(PSTR("M502"));
-        RTS_ShowPage(33);
-        settings.save();
-        RTS_SendDefaultRates();
+        //queue.enqueue_now_P(PSTR("M502"));
+        RTS_ShowPage(76);
+        //settings.save();
+        //RTS_SendDefaultRates();
         // delay(100);
       }
       else if(recdat.data[0] == 3)
       {
-        RTS_ShowPage(33);
+        RTS_ShowPage(67);
       }
       else if(recdat.data[0] == 4)
       {
-        RTS_ShowPage(34);
+        RTS_ShowPage(68);
       }
       else if(recdat.data[0] == 5)
       {
-        RTS_ShowPage(39);
+        RTS_ShowPage(69);
       }
-      else if(recdat.data[0] == 7) //传动比
+      else if(recdat.data[0] == 7)
       {
         RTS_ShowPage(76);
       }
-      else if(recdat.data[0] == 8) //最大加速度
+      else if(recdat.data[0] == 8) // back to motion with save
       {
-        RTS_ShowPage(67);
+        RTS_ShowPage(34);
+        settings.save();
+        delay(100);
       }
       else if(recdat.data[0] == 9) //最大拐角速度
       {
@@ -1564,7 +1569,7 @@ void EachMomentUpdateLaser(void)
         }
       #endif
 
-      if( marlin_state == MF_RUNNING && first_start_laser == true)
+      if( marlin_state == MarlinState::MF_RUNNING && first_start_laser == true)
       {
         char str_1[7],cmd[20]={0};
         first_start_laser = false;

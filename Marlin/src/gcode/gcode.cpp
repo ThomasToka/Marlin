@@ -1274,9 +1274,9 @@ void GcodeSuite::process_subcommands_now(char * gcode) {
         case PAUSED_FOR_USER:
         
         #if ENABLED(E3S1PRO_RTS)
-        if (change_page_font == 7) {        
-          SERIAL_ECHO_MSG(STR_BUSY_PAUSED_FOR_USER);
-        }
+          if (change_page_font == 7) {        
+            SERIAL_ECHO_MSG(STR_BUSY_PAUSED_FOR_USER);
+          }
         #else
           SERIAL_ECHO_MSG(STR_BUSY_PAUSED_FOR_USER);
         #endif

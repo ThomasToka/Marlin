@@ -69,7 +69,7 @@
 //#define ENDER_3S1_PRO
 //#define ENDER_3S1_PLUS
 //#define ENDER_3S1
-#define FORK_VERSION "v027"
+#define FORK_VERSION "v028"
 
 // Choose the name from boards.h that matches your setup
 #define USER_STM32F401  1
@@ -2998,7 +2998,7 @@
  * SD Card support is disabled by default. If your controller has an SD slot,
  * you must uncomment the following option or it won't work.
  */
-//#define SDSUPPORT
+#define SDSUPPORT
 
 /**
  * SD CARD: ENABLE CRC

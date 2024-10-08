@@ -3426,12 +3426,10 @@
   #endif
 #endif
 
-#if ENABLED(E3S1PRO_RTS)
-  #if HAS_MULTI_LANGUAGE
-    #define HAS_M414_COMMAND 1
-  #endif
-  #define HAS_M808_COMMAND 1
+#if HAS_MULTI_LANGUAGE
+  #define HAS_M414_COMMAND 1
 #endif
+#define HAS_M808_COMMAND 1
 
 #if ANY(HAS_MARLINUI_MENU, TOUCH_UI_FTDI_EVE)
   // LCD timeout to status screen default is 15s

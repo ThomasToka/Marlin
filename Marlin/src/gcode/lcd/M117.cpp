@@ -99,7 +99,7 @@ void GcodeSuite::M117() {
           RTS_ShowPage(10);
         }
         #if ENABLED(LCD_RTS_DEBUG_LCD)
-          SERIAL_ECHO_MSG("Current Position Z: ", current_z_pos * 100);
+          SERIAL_ECHO_MSG("Current Position Z: ", current_z_pos);
           SERIAL_ECHO_MSG("L-command: ", m117_layer);
           SERIAL_ECHO_MSG("G-command: ", picFilament_g_todo);
           SERIAL_ECHO_MSG("M-command: ", picFilament_m_todo);

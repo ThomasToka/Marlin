@@ -600,6 +600,10 @@
 #ifdef GRID_MAX_POINTS_X
   #define GRID_MAX_POINTS ((GRID_MAX_POINTS_X) * (GRID_MAX_POINTS_Y))
   #define GRID_LOOP(A,B) for (uint8_t A = 0; A < GRID_MAX_POINTS_X; ++A) for (uint8_t B = 0; B < GRID_MAX_POINTS_Y; ++B)
+  #define GRID_USED_POINTS_X bedlevel.max_points.x
+  #define GRID_USED_POINTS_Y bedlevel.max_points.y
+  #define GRID_USED_POINTS (GRID_USED_POINTS_X * GRID_USED_POINTS_Y)
+  #define GRID_LOOP_USED(A,B) for (uint8_t A = 0; A < GRID_USED_POINTS_X; ++A) for (uint8_t B = 0; B < GRID_USED_POINTS_Y; ++B)
 #endif
 
 /**

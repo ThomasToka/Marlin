@@ -119,10 +119,8 @@ void GcodeSuite::M104_M109(const bool isM109) {
     #endif
     thermalManager.setTargetHotend(temp, target_extruder);
     
-    #if ENABLED(E3S1PRO_RTS)
-      // to be fixed
-      temphot = temp;
-    #endif
+    // to be fixed
+    TERN_(E3S1PRO_RTS, temphot = temp);      
     
     #if ENABLED(DUAL_X_CARRIAGE)
       if (idex_is_duplicating() && target_extruder == 0)

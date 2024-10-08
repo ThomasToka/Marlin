@@ -51,6 +51,11 @@
   #include "../../feature/spindle_laser.h"
 #endif
 
+#if ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
+  #include "../../module/planner.h"
+#endif
+
 /**
  * M24: Start or Resume SD Print
  */
@@ -112,6 +117,8 @@ void GcodeSuite::M25() {
 
   #else
 
+    TERN_(E3S1PRO_RTS, waitway = 1);
+
     // Set initial pause flag to prevent more commands from landing in the queue while we try to pause
     if (IS_SD_PRINTING()) card.pauseSDPrint();
 
@@ -138,6 +145,14 @@ void GcodeSuite::M25() {
       #ifdef ACTION_ON_PAUSE
         hostui.pause();
       #endif
+    #endif
+
+    #if ENABLED(E3S1PRO_RTS)
+      pause_action_flag = true;
+      Update_Time_Value = 0;
+      RTS_ShowPage(40);
+      planner.synchronize();
+      sdcard_pause_check = false;
     #endif
 
   #endif

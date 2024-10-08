@@ -46,9 +46,7 @@ void GcodeSuite::M414() {
   else
     M414_report();
 
-  #if ENABLED(E3S1PRO_RTS)
-    language_change_font = parser.seenval('S');
-  #endif
+  TERN_(E3S1PRO_RTS, language_change_font = parser.seenval('S'));
   
 }
 

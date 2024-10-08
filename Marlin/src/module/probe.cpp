@@ -995,29 +995,12 @@ float Probe::probe_at_point(
       // Something definitely went wrong at this point, so it might be a good idea to release the steppers.
       // The user may want to quickly move the carriage or bed by hand to avoid bed damage from the (hot) nozzle.
       // This would also benefit from the contemplated "Audio Alerts" feature.
-      stow();
-      LCD_MESSAGE(MSG_LCD_PROBING_FAILED);
-      #if DISABLED(G29_RETRY_AND_RECOVER)
-        SERIAL_ERROR_MSG(STR_ERR_PROBING_FAILED);
-      #endif
-    }
-    else {
-      TERN_(HAS_PTC, ptc.apply_compensation(measured_z));
-      TERN_(X_AXIS_TWIST_COMPENSATION, measured_z += xatc.compensation(npos + offset_xy));
-      if (verbose_level > 2 || DEBUGGING(LEVELING))
-        SERIAL_ECHOLNPGM("Bed X: ", LOGICAL_X_POSITION(rx), " Y: ", LOGICAL_Y_POSITION(ry), " Z: ", measured_z);
-    }
-
-    // If any error occurred stow the probe and set an alert
-    if (isnan(measured_z)) {
-
       #if ENABLED(E3S1PRO_RTS)
         waitway = 0;
         RTS_ShowPage(41);
         rtscheck.RTS_SndData(Error_203, ABNORMAL_PAGE_TEXT_VP);
         errorway = 3;
       #endif
-    
       stow();
       LCD_MESSAGE(MSG_LCD_PROBING_FAILED);
       #if DISABLED(G29_RETRY_AND_RECOVER)
@@ -1029,7 +1012,7 @@ float Probe::probe_at_point(
       TERN_(X_AXIS_TWIST_COMPENSATION, measured_z += xatc.compensation(npos + offset_xy));
       if (verbose_level > 2 || DEBUGGING(LEVELING))
         SERIAL_ECHOLNPGM("Bed X: ", LOGICAL_X_POSITION(rx), " Y: ", LOGICAL_Y_POSITION(ry), " Z: ", measured_z);
-    }    
+    }
 
     return measured_z;
 

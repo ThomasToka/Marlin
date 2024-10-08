@@ -323,12 +323,7 @@ typedef struct {
       if (bed_temp > 25) {
         LCD_MESSAGE_MAX(MSG_G26_HEATING_BED);
 
-        #if ENABLED(E3S1PRO_RTS)
-          TERN_(HAS_MARLINUI_MENU, ui.quick_feedback());
-        #else
-          ui.quick_feedback();
-        #endif
-        
+        TERN_(HAS_MARLINUI_MENU, ui.quick_feedback());
         TERN_(HAS_MARLINUI_MENU, ui.capture());
         thermalManager.setTargetBed(bed_temp);
 

@@ -229,6 +229,23 @@ switch(action){
                 #endif  
         }
     break;
+    case 8:
+        if(leveling_running == 0)
+        {    
+            if (parser.seenval('F')){
+                m19_f = parser.value_int();
+                lcd_rts_settings.plr_offset = m19_f;
+                #if ENABLED(LCD_RTS_DEBUG_LCD)
+                    SERIAL_ECHO_MSG("M19 S8 arrived F", m19_f);
+                #endif          
+            }
+            settings.save();
+        }else{
+                #if ENABLED(LCD_RTS_DEBUG_LCD)
+                    SERIAL_ECHO_MSG("M19 S8 arrived.");
+                #endif  
+        }
+    break;    
     default:
         #if ENABLED(LCD_RTS_DEBUG_LCD)
             SERIAL_ECHO_MSG("Input argument is not known S", action);

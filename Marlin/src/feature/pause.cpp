@@ -156,9 +156,8 @@ static bool ensure_safe_temperature(const bool wait=true, const PauseMode mode=P
 
   ui.pause_show_message(PAUSE_MESSAGE_HEATING, mode);
 
-  #if ENABLED(E3S1PRO_RTS)
-    RTS_SendHeadCurrentTemp();
-  #endif
+  TERN_(E3S1PRO_RTS, RTS_SendHeadCurrentTemp());
+
   #if ENABLED(SOVOL_SV06_RTS)
     rts.gotoPage(ID_Cold_L, ID_Cold_D);
     rts.updateTempE0();
@@ -292,11 +291,7 @@ bool load_filament(const_float_t slow_load_length/*=0*/, const_float_t fast_load
         if (show_lcd)
         {
           ui.pause_show_message(PAUSE_MESSAGE_PURGE);
-          
-          #if ENABLED(E3S1PRO_RTS)
-            RTS_SendHeadCurrentTemp();          
-          #endif
-
+          TERN_(E3S1PRO_RTS, RTS_SendHeadCurrentTemp());          
         }          
 
         #if ENABLED(SOVOL_SV06_RTS)
@@ -383,12 +378,8 @@ bool unload_filament(const_float_t unload_length, const bool show_lcd/*=false*/,
 
   if (show_lcd){
     ui.pause_show_message(PAUSE_MESSAGE_UNLOAD, mode);
-
-    #if ENABLED(E3S1PRO_RTS)
-      RTS_SendHeadCurrentTemp();
-    #endif
-    
-  }     
+    TERN_(E3S1PRO_RTS, RTS_SendHeadCurrentTemp());
+  }
 
   #if ENABLED(SOVOL_SV06_RTS)
     rts.updateTempE0();
@@ -512,9 +503,7 @@ bool pause_print(const_float_t retract, const xyz_pos_t &park_point, const bool 
   if (do_park) nozzle.park(0, park_point); // Park the nozzle by doing a Minimum Z Raise followed by an XY Move
   if (!do_park) LCD_MESSAGE(MSG_PARK_FAILED);
 
-  #if ENABLED(E3S1PRO_RTS)
-    RTS_SendHeadCurrentTemp();
-  #endif
+  TERN_(E3S1PRO_RTS, RTS_SendHeadCurrentTemp());
 
   #if ENABLED(DUAL_X_CARRIAGE)
     const int8_t saved_ext        = active_extruder;
@@ -553,10 +542,7 @@ void show_continue_prompt(const bool is_reload) {
 
   ui.pause_show_message(is_reload ? PAUSE_MESSAGE_INSERT : PAUSE_MESSAGE_WAITING);
   
-  #if ENABLED(E3S1PRO_RTS)
-    RTS_SendHeadCurrentTemp();
-    //rtscheck.RTS_SndData(Beep, SoundAddr);
-  #endif
+  TERN_(E3S1PRO_RTS, RTS_SendHeadCurrentTemp());  
 
   #if ENABLED(SOVOL_SV06_RTS)
     rts.updateTempE0();
@@ -814,9 +800,7 @@ void resume_print(
 
   TERN_(HAS_FILAMENT_SENSOR, runout.reset());
 
-  #if ENABLED(E3S1PRO_RTS)
-    pause_menu_response = PAUSE_RESPONSE_WAIT_FOR;
-  #endif
+  TERN_(E3S1PRO_RTS, pause_menu_response = PAUSE_RESPONSE_WAIT_FOR);  
 
   ui.reset_status();
   ui.return_to_status();

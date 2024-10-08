@@ -739,9 +739,6 @@ volatile bool Temperature::raw_temps_ready = false;
     
     #if ENABLED(E3S1PRO_RTS)   
       millis_t ui_next_temp_ms = next_temp_ms;
-      //char textRep_cur_cycle[25];
-      //char textRep_cycles[25];
-      //int repT = 1; // added for updating the running icon
       RTS_ResetSingleVP(PID_TUNING_RUNNING_VP);
       if (heater_id == 0)
       {
@@ -1063,9 +1060,7 @@ volatile bool Temperature::raw_temps_ready = false;
         goto EXIT_M303;
       }
 
-      #if ENABLED(E3S1PRO_RTS)
-        TERN(E3S1PRO_RTS, RTSUpdate(), ui.update());      
-      #endif
+      TERN(E3S1PRO_RTS, RTSUpdate(), ui.update());      
 
     }
     wait_for_heatup = false;
@@ -1703,13 +1698,10 @@ void Temperature::_temp_error(
 void Temperature::maxtemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_TEMP, const celsius_float_t deg)) {
   #if HAS_HOTEND || HAS_HEATED_BED
     TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillBadTemp_L, ID_KillBadTemp_D));
+    TERN_(E3S1PRO_RTS, RTS_ShowPage(31));    
     TERN_(DWIN_CREALITY_LCD, dwinPopupTemperature(1));
     TERN_(EXTENSIBLE_UI, ExtUI::onMaxTempError(heater_id));
   #endif
-
-  #if ENABLED(E3S1PRO_RTS) && (HAS_HOTEND || HAS_HEATED_BED)
-    RTS_ShowPage(31);
-  #endif  
 
   _TEMP_ERROR(heater_id, F(STR_T_MAXTEMP), MSG_ERR_MAXTEMP, deg);
 }
@@ -1717,13 +1709,10 @@ void Temperature::maxtemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_T
 void Temperature::mintemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_TEMP, const celsius_float_t deg)) {
   #if HAS_HOTEND || HAS_HEATED_BED
     TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillBadTemp_L, ID_KillBadTemp_D));
+    TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
     TERN_(DWIN_CREALITY_LCD, dwinPopupTemperature(0));
     TERN_(EXTENSIBLE_UI, ExtUI::onMinTempError(heater_id));
   #endif
-
-  #if ENABLED(E3S1PRO_RTS) && (HAS_HOTEND || HAS_HEATED_BED)
-    RTS_ShowPage(31);
-  #endif  
 
   _TEMP_ERROR(heater_id, F(STR_T_MINTEMP), MSG_ERR_MINTEMP, deg);
 }
@@ -1959,12 +1948,9 @@ void Temperature::mintemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_T
             start_watching_hotend(e);               // If temp reached, turn off elapsed check
           else {
             TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillHeat_L, ID_KillHeat_D));
+            TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
             TERN_(DWIN_CREALITY_LCD, dwinPopupTemperature(0));
             TERN_(EXTENSIBLE_UI, ExtUI::onHeatingError(e));
-
-            #if ENABLED(E3S1PRO_RTS)
-              RTS_ShowPage(31);
-            #endif               
 
             _TEMP_ERROR(e, FPSTR(str_t_heating_failed), MSG_ERR_HEATING_FAILED, temp);
           }
@@ -2004,12 +1990,9 @@ void Temperature::mintemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_T
           start_watching_bed();                 // If temp reached, turn off elapsed check
         else {
           TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillHeat_L, ID_KillHeat_D));
+          TERN_(E3S1PRO_RTS, RTS_ShowPage(31));          
           TERN_(DWIN_CREALITY_LCD, dwinPopupTemperature(0));
           TERN_(EXTENSIBLE_UI, ExtUI::onHeatingError(H_BED));
-
-          #if ENABLED(E3S1PRO_RTS)
-            RTS_ShowPage(31);
-          #endif     
 
           _TEMP_ERROR(H_BED, FPSTR(str_t_heating_failed), MSG_ERR_HEATING_FAILED, deg);
         }
@@ -3511,10 +3494,7 @@ void Temperature::init() {
         case TRMalfunction:
           TERN_(DWIN_CREALITY_LCD, dwinPopupTemperature(0));
           TERN_(EXTENSIBLE_UI, ExtUI::onHeatingError(heater_id));
-
-          #if ENABLED(E3S1PRO_RTS)
-            RTS_ShowPage(31);
-          #endif          
+          TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
 
           _TEMP_ERROR(heater_id, F(STR_T_THERMAL_MALFUNCTION), MSG_ERR_TEMP_MALFUNCTION, current);
           break;

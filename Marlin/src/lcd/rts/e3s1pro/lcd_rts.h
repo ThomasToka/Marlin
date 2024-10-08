@@ -563,6 +563,7 @@ uint8_t probe_margin_y_back;
 bool external_m73;
 uint8_t extra_probing;
 uint8_t total_probing;
+uint8_t plr_offset;
 //uint8_t hotend_fan;
 };
 
@@ -843,6 +844,7 @@ extern uint8_t lang;
 extern int Update_Time_Value;
 extern bool PoweroffContinue;
 extern bool sdcard_pause_check;
+extern bool pause_action_flag;
 extern bool SD_Card_status;
 extern bool home_flag;
 extern bool heat_flag;

@@ -1396,11 +1396,7 @@ void setup() {
     );
   #endif
 
-  #if ENABLED(E3S1PRO_RTS)
-    SERIAL_ECHO_MSG(" Compiled: " __DATE__" " __TIME__);
-  #else
-    SERIAL_ECHO_MSG(" Compiled: " __DATE__);
-  #endif
+  SERIAL_ECHO_MSG(" Compiled: " __DATE__" " __TIME__);
 
   SERIAL_ECHO_MSG(STR_FREE_MEMORY, hal.freeMemory(), STR_PLANNER_BUFFER_BYTES, sizeof(block_t) * (BLOCK_BUFFER_SIZE));
 
@@ -1432,10 +1428,8 @@ void setup() {
   #if ENABLED(SOVOL_SV06_RTS)
     SETUP_RUN(RTS_Update());
   #elif ENABLED(E3S1PRO_RTS)
-    #ifdef LCD_SERIAL_PORT
-      //SETUP_RUN(RTSUpdate());
-      LCD_SERIAL.begin(LCD_BAUDRATE);
-    #endif
+    //SETUP_RUN(RTSUpdate());
+    LCD_SERIAL.begin(LCD_BAUDRATE);
   #else
     SETUP_RUN(ui.init());
   #endif
@@ -1449,7 +1443,7 @@ void setup() {
     #endif
   #endif
 
-  #if HAS_MEDIA && ANY(SDCARD_EEPROM_EMULATION, POWER_LOSS_RECOVERY)
+  #if HAS_MEDIA && ANY(SDCARD_EEPROM_EMULATION, POWER_LOSS_RECOVERY) && DISABLED(E3S1PRO_RTS)
     SETUP_RUN(card.mount());          // Mount media with settings before first_load
   #endif
 
@@ -1459,7 +1453,7 @@ void setup() {
   #endif
 
   #if ENABLED(E3S1PRO_RTS)
-  lang = language_change_font;
+    lang = language_change_font;
   #else
     #if HAS_MULTI_LANGUAGE
       TERN_(HAS_M414_COMMAND, lang = language_change_font);

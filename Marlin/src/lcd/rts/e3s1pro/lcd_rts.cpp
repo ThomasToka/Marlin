@@ -333,6 +333,7 @@ void resetSettings() {
   lcd_rts_settings.external_m73 = false;
   lcd_rts_settings.extra_probing = 0;
   lcd_rts_settings.total_probing = 3;
+  lcd_rts_settings.plr_offset = 5;  
   //lcd_rts_settings.hotend_fan = 255;  
   #if ENABLED(LCD_RTS_DEBUG_EEPROM_SETTINGS)
     SERIAL_ECHOLNPGM("------Reset lcd_rts_settings from lcd_rts.cpp!-------");  
@@ -359,6 +360,7 @@ void loadSettings(const char * const buff) {
     SERIAL_ECHOLNPGM("external m73: ", lcd_rts_settings.external_m73);
     SERIAL_ECHOLNPGM("extra_probing: ", lcd_rts_settings.extra_probing);
     SERIAL_ECHOLNPGM("total_probing: ", lcd_rts_settings.total_probing);
+    SERIAL_ECHOLNPGM("plr_offset: ", lcd_rts_settings.plr_offset);
     //SERIAL_ECHOLNPGM("hotend_fan: ", lcd_rts_settings.hotend_fan);    
     SERIAL_ECHOLNPGM("------Load lcd_rts_settings from lcd_rts.cpp!-------");    
   #endif
@@ -384,6 +386,7 @@ void saveSettings(char * const buff) {
     SERIAL_ECHOLNPGM("external m73: ", lcd_rts_settings.external_m73);
     SERIAL_ECHOLNPGM("extra_probing: ", lcd_rts_settings.extra_probing);
     SERIAL_ECHOLNPGM("total_probing: ", lcd_rts_settings.total_probing);
+    SERIAL_ECHOLNPGM("plr_offset: ", lcd_rts_settings.plr_offset);    
     //SERIAL_ECHOLNPGM("hotend_fan: ", lcd_rts_settings.hotend_fan);      
     SERIAL_ECHOLNPGM("------Save lcd_rts_settings from lcd_rts.cpp!-------");
   #endif
@@ -732,10 +735,10 @@ void RTSSHOW::RTS_Init(void)
   AxisUnitMode = 1;
   lang = language_change_font;
 
-  #if ENABLED(POWER_LOSS_RECOVERY)
-    if (!IS_SD_INSERTED()) { delay(50); card.mount(); }
-    if (IS_SD_INSERTED()) recovery.check();
-  #endif
+  //#if ENABLED(POWER_LOSS_RECOVERY)
+  //  if (!IS_SD_INSERTED()) { delay(50); card.mount(); }
+  //  if (IS_SD_INSERTED()) recovery.check();
+  //#endif
 
   delay(50);
   last_zoffset = zprobe_zoffset = probe.offset.z;
@@ -1478,9 +1481,7 @@ void RTSSHOW::RTS_HandleData(void)
           RTS_SndData(101, FILAMENT_CONTROL_ICON_VP);
           runout.enabled = true;
         }
-        if(!printingIsActive()){
-          settings.save();
-        }
+        settings.save();
       }      
       else if(recdat.data[0] == 9)
       {
@@ -1502,15 +1503,12 @@ void RTSSHOW::RTS_HandleData(void)
           recovery.enabled = true;
           recovery.save(true);
         }
-        if(!printingIsActive()){
-          settings.save();
-        }
+        settings.save();
       }
       break;
 
     case PrintSpeedEnterKey:
       feedrate_percentage = recdat.data[0];
-      
       break;
 
     case StopPrintKey:
@@ -1667,21 +1665,13 @@ void RTSSHOW::RTS_HandleData(void)
           break;
         }
 
-        waitway = 1;
-
         if(!temphot)
         {
           temphot = thermalManager.temp_hotend[0].target;
         }
-        // card.pauseSDPrint();
-        // print_job_timer.pause();
+
         queue.inject_P(PSTR("M25"));
-        TERN_(HOST_PAUSE_M76, hostui.pause());        
-        pause_action_flag = true;
-        Update_Time_Value = 0;
-        RTS_ShowPage(40);
-        planner.synchronize();
-        sdcard_pause_check = false;
+
       }
       else if(recdat.data[0] == 3)
       {
@@ -1725,8 +1715,6 @@ void RTSSHOW::RTS_HandleData(void)
             memset(commandbuf, 0, sizeof(commandbuf));
             sprintf_P(commandbuf, PSTR("M109 S%i"), temphot);
             queue.enqueue_one_now(commandbuf);
-            // card.startOrResumeFilePrinting();
-            // print_job_timer.start();
             queue.inject_P(PSTR("M24"));
             Update_Time_Value = 0;
             sdcard_pause_check = true;
@@ -3124,7 +3112,25 @@ void RTSSHOW::RTS_HandleData(void)
             } else {              
               RTS_ShowPreviewImage(true);
             }
+            rtscheck.RTS_SndData(picLayers, PRINT_LAYERS_VP);
+            rtscheck.RTS_SndData(picFilament_m, PRINT_FILAMENT_M_VP);
+            rtscheck.RTS_SndData(picFilament_g, PRINT_FILAMENT_G_VP);
+            rtscheck.RTS_SndData(picLayerHeight * 100, PRINT_LAYER_HEIGHT_VP);            
           #endif
+          for(uint16_t i = 0;i < CardRecbuf.Filesum;i ++) 
+          {
+            if(!strcmp(CardRecbuf.Cardfilename[i], &recovery.info.sd_filename[1]))
+            {
+              if (CardRecbuf.filenamelen[i] > 25){
+                rtscheck.RTS_SndData(CardRecbuf.Cardshowfilename[i], SELECT_FILE_TEXT_VP);
+              }else{
+                rtscheck.RTS_SndData(CardRecbuf.Cardshowfilename[i], PRINT_FILE_TEXT_VP);
+              }
+              #if ENABLED(LCD_RTS_DEBUG_SDCARD)
+                SERIAL_ECHO_MSG("CardRecbuf.Cardshowfilename[i]", CardRecbuf.Cardshowfilename[i]);
+              #endif
+            }
+          }
           // recovery.resume();
           queue.enqueue_now_P(PSTR("M1000"));
           sdcard_pause_check = true;
@@ -5535,13 +5541,8 @@ void RTS_CommandPause(void)
 {
   if(printingIsActive())
   {
-        //rtscheck.RTS_SndData(planner.flow_percentage[0], E0_SET_FLOW_VP);
         RTS_LoadMainsiteIcons();
         RTS_ShowPage(13);
-
-    // card.pauseSDPrint();
-    // print_job_timer.pause();
-    // pause_action_flag = true; 
   }
 }
 

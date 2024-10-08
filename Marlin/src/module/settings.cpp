@@ -1765,9 +1765,7 @@ void MarlinSettings::postprocess() {
       EEPROM_WRITE(caselight.brightness);
     #endif
 
-    #if ENABLED(E3S1PRO_RTS)
-        EEPROM_WRITE(language_change_font);
-    #endif
+    TERN_(E3S1PRO_RTS, EEPROM_WRITE(language_change_font));
 
     //
     // Password feature
@@ -3532,9 +3530,7 @@ void MarlinSettings::reset() {
   //
   TERN_(CASELIGHT_USES_BRIGHTNESS, caselight.brightness = CASE_LIGHT_DEFAULT_BRIGHTNESS);
 
-  #if ENABLED(E3S1PRO_RTS)
-      language_change_font = 2;
-  #endif
+  TERN_(E3S1PRO_RTS, language_change_font = 2);
 
   //
   // TOUCH_SCREEN_CALIBRATION

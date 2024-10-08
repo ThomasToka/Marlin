@@ -54,13 +54,11 @@ void GcodeSuite::M300() {
   #if ENABLED(E3S1PRO_RTS)
     rtscheck.RTS_SndData(StartSoundSet, SoundAddr);
   #else
-  const uint16_t frequency = parser.ushortval('S', 260);
-  uint16_t duration = parser.ushortval('P', 1000);
-
-  // Limits the tone duration to 0-5 seconds.
-  NOMORE(duration, 5000U);
-
-  BUZZ(duration, frequency);
+    const uint16_t frequency = parser.ushortval('S', 260);
+    uint16_t duration = parser.ushortval('P', 1000);
+    // Limits the tone duration to 0-5 seconds.
+    NOMORE(duration, 5000U);
+    BUZZ(duration, frequency);
   #endif
 
 }
