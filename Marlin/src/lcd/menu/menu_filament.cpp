@@ -274,12 +274,10 @@ void menu_pause_option() {
   if (!still_out)
     ACTION_ITEM(MSG_FILAMENT_CHANGE_OPTION_RESUME, []{ pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT; });
 
-    #if ENABLED(E3S1PRO_RTS)
-        RTS_ShowPage(8);
-      #if ENABLED(FILAMENT_RUNOUT_SENSOR_DEBUG)
-        SERIAL_ECHOLNPAIR("\r\npause_menu_response: ", pause_menu_response);
-      #endif
-    #endif
+  TERN_(E3S1PRO_RTS, RTS_ShowPage(8));
+  #if ENABLED(FILAMENT_RUNOUT_SENSOR_DEBUG)
+    SERIAL_ECHOLNPAIR("\r\npause_menu_response: ", pause_menu_response);
+  #endif
     
   END_MENU();
 }

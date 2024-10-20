@@ -563,7 +563,8 @@ uint8_t probe_margin_y_back;
 bool external_m73;
 uint8_t extra_probing;
 uint8_t total_probing;
-uint8_t plr_offset;
+uint8_t plr_zraise;
+bool boot_zraise;
 //uint8_t hotend_fan;
 };
 
@@ -826,13 +827,13 @@ const unsigned long Addrbuf[] =
 
 extern int EndsWith(const char*, const char*);
 void ErrorHanding(void);
-extern void RTSUpdate(void);
+extern void RTS_Update(void);
 //#if ENABLED(LCD_RTS_SOFTWARE_AUTOSCROLL)
-//  extern void RTSUpdate_SCROLLING(void);
+//  extern void RTS_Update_SCROLLING(void);
 //#endif
 extern void RTSInit(void);
 #if HAS_CUTTER
-  extern void RTSUpdateLaser(void);
+  extern void RTS_UpdateLaser(void);
 #endif
 extern int touchscreen_requested_mesh;
 extern float zprobe_zoffset;

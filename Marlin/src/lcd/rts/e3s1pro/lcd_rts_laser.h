@@ -25,7 +25,7 @@
 extern RTSSHOW rtscheck;
 extern const unsigned long Addrbuf[];
 void ErrorHanding(void);
-extern void RTSUpdate(void);
+extern void RTS_Update(void);
 extern void RTSInit(void);
 extern float zprobe_zoffset;
 extern char waitway;

@@ -35,7 +35,8 @@
 #endif
 
 #if ENABLED(E3S1PRO_RTS)
-#include "../../../module/temperature.h"
+  #include "../../../module/temperature.h"
+  #include "../../../lcd/rts/e3s1pro/lcd_rts.h"  
 #endif
 
 #if HAS_MULTI_EXTRUDER
@@ -52,10 +53,6 @@
   #if ENABLED(MMU_MENUS)
     #include "../../../lcd/menu/menu_mmu2.h"
   #endif
-#endif
-
-#if ENABLED(E3S1PRO_RTS)
-  #include "../../../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
 
 #if ENABLED(MIXING_EXTRUDER)

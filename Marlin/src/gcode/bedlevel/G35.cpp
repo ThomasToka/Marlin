@@ -136,10 +136,12 @@ void GcodeSuite::G35() {
         FPSTR(SP_Z_STR), z_probed_height
       );
     }
-    rtscheck.RTS_SndData(z_probed_height * 1000, ASSISTED_TRAMMING_POINT_1_VP + i);
-    #if ENABLED(LCD_RTS_DEBUG_LEVELING)
-      SERIAL_ECHO_MSG("tramming_point_name[i] ", tramming_point_name[i]);
-      SERIAL_ECHO_MSG("z_probed_height ", z_probed_height);
+    #if ENABLED(E3S1PRO_RTS)    
+      rtscheck.RTS_SndData(z_probed_height * 1000, ASSISTED_TRAMMING_POINT_1_VP + i);
+      #if ENABLED(LCD_RTS_DEBUG_LEVELING)
+        SERIAL_ECHO_MSG("tramming_point_name[i] ", tramming_point_name[i]);
+        SERIAL_ECHO_MSG("z_probed_height ", z_probed_height);
+      #endif
     #endif
     z_measured[i] = z_probed_height;
     probed_points[i] = true; // Mark this point as probed
@@ -187,8 +189,10 @@ void GcodeSuite::G35() {
         rtscheck.RTS_SndData(str, addr);
       #endif
     }
-    leveling_running = 0;
-    RTS_ShowPage(98);
+    #if ENABLED(E3S1PRO_RTS)    
+      leveling_running = 0;
+      RTS_ShowPage(98);
+    #endif
   
   } else {
   

@@ -598,6 +598,7 @@ typedef struct SettingsDataStruct {
     uint8_t dwin_settings[jyersDWIN.eeprom_data_size];
   #elif ENABLED(E3S1PRO_RTS)
     uint8_t lcd_rts_settings[eeprom_data_size];
+    uint8_t language_change_font;
   #endif
 
   //
@@ -605,10 +606,6 @@ typedef struct SettingsDataStruct {
   //
   #if CASELIGHT_USES_BRIGHTNESS
     uint8_t caselight_brightness;                        // M355 P
-  #endif
-
-  #if ENABLED(E3S1PRO_RTS)
-    uint8_t language_change_font;
   #endif
 
   //
@@ -4335,6 +4332,8 @@ void MarlinSettings::reset() {
         SERIAL_ECHO_MSG("Screen standby time: ", lcd_rts_settings.standby_time_seconds);            
         SERIAL_ECHO_MSG("Display sound: ", lcd_rts_settings.display_sound);
         SERIAL_ECHO_MSG("Display volume: ", lcd_rts_settings.display_volume);
+        SERIAL_ECHO_MSG("PLR Zraise: ", lcd_rts_settings.plr_zraise);
+        SERIAL_ECHO_MSG("Boot Zraise: ", lcd_rts_settings.boot_zraise);        
       #endif
     #endif
 

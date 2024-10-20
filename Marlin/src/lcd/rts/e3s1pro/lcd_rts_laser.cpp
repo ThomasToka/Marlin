@@ -20,9 +20,6 @@
 #include "../../../gcode/queue.h"
 #include "../../../gcode/gcode.h"
 #include "../../../module/probe.h"
-
-// #include "../../../feature/bedlevel/abl/bbl.h"
-
 #include "../../../libs/duration_t.h"
 
 #if ENABLED(BLTOUCH)
@@ -56,18 +53,13 @@
 
 #if ENABLED(E3S1PRO_RTS)
 
-
-
 extern void RTS_line_to_current(AxisEnum axis);
-
 constexpr float default_max_feedrate[]        = DEFAULT_MAX_FEEDRATE;
 constexpr float default_max_acceleration[]    = DEFAULT_MAX_ACCELERATION;
 constexpr float default_max_jerk[]            = { DEFAULT_XJERK, DEFAULT_YJERK, DEFAULT_ZJERK, DEFAULT_EJERK };
 constexpr float default_axis_steps_per_unit[] = DEFAULT_AXIS_STEPS_PER_UNIT;
-
 static bool first_start_laser = true;
 bool laser_axes_should_home = false;
-
 int16_t fileCnt_laser = 0;
 uint8_t file_current_page_laser = 1;
 uint8_t file_total_page_laser = 1;
@@ -1592,7 +1584,7 @@ void EachMomentUpdateLaser(void)
   }
 }
 
-void RTSUpdateLaser(void)
+void RTS_UpdateLaser(void)
 {
   // Check the status of card
   rtscheck.RTS_SDCardUpdate();

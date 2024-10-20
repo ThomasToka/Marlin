@@ -69,14 +69,18 @@
 //#define ENDER_3S1_PRO
 //#define ENDER_3S1_PLUS
 //#define ENDER_3S1
-#define FORK_VERSION "v028"
+#define FORK_VERSION "v029"
 
 // Choose the name from boards.h that matches your setup
 #define USER_STM32F401  1
-#define MOTHERBOARD BOARD_CREALITY_V24S1_301F4
+#ifdef USER_STM32F401
+  #define MOTHERBOARD BOARD_CREALITY_V24S1_301F4
+#endif
 //#define USER_STM32F103RE  1
 //#define USER_STM32F103RC  1
-//#define MOTHERBOARD BOARD_CREALITY_V24S1_301
+#if defined(USER_STM32F103RE) || defined(USER_STM32F103RC)
+  #define MOTHERBOARD BOARD_CREALITY_V24S1_301
+#endif
 //#define WATCHDOG_DURATION_8S
 //
 // Ender-3S1Pro touch display. Uses lcd_rts.cpp.
@@ -2047,7 +2051,7 @@
 #define Z_CLEARANCE_FOR_HOMING  5 // (mm) Minimal Z height before homing (G28) for Z clearance above the bed, clamps, ...
                                     // Be sure to have this much clearance over your Z_MAX_POS to prevent grinding.
 
-#define Z_AFTER_HOMING         5 // (mm) Height to move to after homing Z
+#define Z_AFTER_HOMING          5 // (mm) Height to move to after homing Z
 //#define XY_AFTER_HOMING { 10, 10 }  // (mm) Move to an XY position after homing (and raising Z)
 
 //#define EVENT_GCODE_AFTER_HOMING "M300 P440 S200"  // Commands to run after G28 (and move to XY_AFTER_HOMING)

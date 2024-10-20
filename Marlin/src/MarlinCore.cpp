@@ -906,23 +906,18 @@ void idle(const bool no_stepper_sleep/*=false*/) {
   // Handle UI input / draw events
   #if ENABLED(SOVOL_SV06_RTS)
     RTS_Update();
-  #else
-    ui.update();
-  #endif
-
-  #if ENABLED(E3S1PRO_RTS)
+  #elif ENABLED(E3S1PRO_RTS)
     #if ENABLED(LASER_FEATURE)
       if(laser_device.is_laser_device())
       {
-        TERN(E3S1PRO_RTS, RTSUpdateLaser(),ui.update());
+        RTS_UpdateLaser();
       }else
     #endif
-    {
-      TERN(E3S1PRO_RTS, RTSUpdate(),ui.update());
-      //#if ENABLED(LCD_RTS_SOFTWARE_AUTOSCROLL)
-      //  TERN_(E3S1PRO_RTS, RTSUpdate_SCROLLING());
-      //#endif
-    }
+      {
+        RTS_Update();
+      }
+  #else
+    ui.update();
   #endif
 
   // Run i2c Position Encoders
@@ -1260,7 +1255,7 @@ void setup() {
   millis_t serial_connect_timeout = millis() + 1000UL;
   while (!MYSERIAL1.connected() && PENDING(millis(), serial_connect_timeout)) { /*nada*/ }
 
-  #if ENABLED(SOVOL_SV06_RTS)
+  #if ENABLED(SOVOL_SV06_RTS) || ENABLED(E3S1PRO_RTS)
     LCD_SERIAL.begin(BAUDRATE);
     serial_connect_timeout = millis() + 1000UL;
     while (!LCD_SERIAL.connected() && PENDING(millis(), serial_connect_timeout)) { /*nada*/ }
@@ -1428,8 +1423,7 @@ void setup() {
   #if ENABLED(SOVOL_SV06_RTS)
     SETUP_RUN(RTS_Update());
   #elif ENABLED(E3S1PRO_RTS)
-    //SETUP_RUN(RTSUpdate());
-    LCD_SERIAL.begin(LCD_BAUDRATE);
+    SETUP_RUN(RTS_Update());
   #else
     SETUP_RUN(ui.init());
   #endif
@@ -1736,14 +1730,12 @@ void setup() {
     SETUP_RUN(dwinInitScreen());
   #elif ENABLED(SOVOL_SV06_RTS)
     SETUP_RUN(rts.init());
-  #endif
-
-  #if ENABLED(E3S1PRO_RTS)
-      #if ENABLED(LASER_FEATURE)
-        if(laser_device.is_laser_device()) laser_device.laser_power_open();
-      #endif
-      delay(500);
-      SETUP_RUN(rtscheck.RTS_Init());
+  #elif ENABLED(E3S1PRO_RTS)
+    #if ENABLED(LASER_FEATURE)
+      if(laser_device.is_laser_device()) laser_device.laser_power_open();
+    #endif
+    //delay(500);
+    SETUP_RUN(rtscheck.RTS_Init());  
   #endif
 
   #if HAS_SERVICE_INTERVALS && DISABLED(DWIN_CREALITY_LCD)

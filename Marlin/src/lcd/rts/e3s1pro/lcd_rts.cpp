@@ -333,7 +333,8 @@ void resetSettings() {
   lcd_rts_settings.external_m73 = false;
   lcd_rts_settings.extra_probing = 0;
   lcd_rts_settings.total_probing = 3;
-  lcd_rts_settings.plr_offset = 5;  
+  lcd_rts_settings.plr_zraise = 5;
+  lcd_rts_settings.boot_zraise = true;
   //lcd_rts_settings.hotend_fan = 255;  
   #if ENABLED(LCD_RTS_DEBUG_EEPROM_SETTINGS)
     SERIAL_ECHOLNPGM("------Reset lcd_rts_settings from lcd_rts.cpp!-------");  
@@ -360,7 +361,8 @@ void loadSettings(const char * const buff) {
     SERIAL_ECHOLNPGM("external m73: ", lcd_rts_settings.external_m73);
     SERIAL_ECHOLNPGM("extra_probing: ", lcd_rts_settings.extra_probing);
     SERIAL_ECHOLNPGM("total_probing: ", lcd_rts_settings.total_probing);
-    SERIAL_ECHOLNPGM("plr_offset: ", lcd_rts_settings.plr_offset);
+    SERIAL_ECHOLNPGM("plr_zraise: ", lcd_rts_settings.plr_zraise);
+    SERIAL_ECHOLNPGM("boot_zraise: ", lcd_rts_settings.boot_zraise);
     //SERIAL_ECHOLNPGM("hotend_fan: ", lcd_rts_settings.hotend_fan);    
     SERIAL_ECHOLNPGM("------Load lcd_rts_settings from lcd_rts.cpp!-------");    
   #endif
@@ -386,7 +388,8 @@ void saveSettings(char * const buff) {
     SERIAL_ECHOLNPGM("external m73: ", lcd_rts_settings.external_m73);
     SERIAL_ECHOLNPGM("extra_probing: ", lcd_rts_settings.extra_probing);
     SERIAL_ECHOLNPGM("total_probing: ", lcd_rts_settings.total_probing);
-    SERIAL_ECHOLNPGM("plr_offset: ", lcd_rts_settings.plr_offset);    
+    SERIAL_ECHOLNPGM("plr_zraise: ", lcd_rts_settings.plr_zraise);
+    SERIAL_ECHOLNPGM("boot_zraise: ", lcd_rts_settings.boot_zraise);
     //SERIAL_ECHOLNPGM("hotend_fan: ", lcd_rts_settings.hotend_fan);      
     SERIAL_ECHOLNPGM("------Save lcd_rts_settings from lcd_rts.cpp!-------");
   #endif
@@ -735,11 +738,6 @@ void RTSSHOW::RTS_Init(void)
   AxisUnitMode = 1;
   lang = language_change_font;
 
-  //#if ENABLED(POWER_LOSS_RECOVERY)
-  //  if (!IS_SD_INSERTED()) { delay(50); card.mount(); }
-  //  if (IS_SD_INSERTED()) recovery.check();
-  //#endif
-
   delay(50);
   last_zoffset = zprobe_zoffset = probe.offset.z;
   touchscreen_requested_mesh = 0;
@@ -763,7 +761,6 @@ void RTSSHOW::RTS_Init(void)
   /***************transmit temperature to screen*****************/
   RTS_ResetHeadAndBedSetTemp();
   rtscheck.RTS_SendLoadedData(255);
-  queue.enqueue_now_P(PSTR("M402"));
 
   #if ENABLED(GCODE_PREVIEW_ENABLED)
     RTS_ResetSingleVP(DEFAULT_PRINT_MODEL_VP);
@@ -3865,7 +3862,7 @@ void RTSSHOW::RTS_HandleData(void)
         }
 
         const char* commands[] = {
-            "M92", "M201", "M203", "M204", "M205", "M206", "M301", "M304", "M593 X", "M593 Y", "M851", "M900", "M19"
+            "M92", "M201", "M203", "M204", "M205", "M206", "M301", "M304", "M593 X", "M593 Y", "M851", "M900", "M19", "M19"
         };
         // Define the buffer to hold the command string
         char buffer[100];
@@ -3989,6 +3986,11 @@ void RTSSHOW::RTS_HandleData(void)
                 snprintf(valueStr4, sizeof(valueStr4), "%u", lcd_rts_settings.total_probing);
                 snprintf(buffer, sizeof(buffer), " S7 X%s Y%s F%s P%s", valueStr1, valueStr2, valueStr3, valueStr4);
                 card.write(buffer, strlen(buffer));
+            } else if (i == 13) {
+                char valueStr1[2]; // 2 characters: 1 for '0' or '1' and 1 for null terminator
+                snprintf(valueStr1, sizeof(valueStr1), "%u", lcd_rts_settings.boot_zraise ? 1 : 0); // Convert bool to 0 or 1
+                snprintf(buffer, sizeof(buffer), " S9 F%s", valueStr1);
+                card.write(buffer, strlen(buffer));
             }
             card.write((char*)"\n", 1);
         }
@@ -4060,7 +4062,6 @@ void RTSSHOW::RTS_HandleData(void)
         }else{
           RTS_SndData(CardRecbuf.Cardshowfilename[CardRecbuf.recordcount], PRINT_FILE_TEXT_VP);
         }
-        //RTS_SndData(CardRecbuf.Cardshowfilename[CardRecbuf.recordcount], SELECT_FILE_TEXT_VP);
         delay(2);
         #if ENABLED(BABYSTEPPING)
           RTS_ResetSingleVP(AUTO_BED_LEVEL_ZOFFSET_VP);
@@ -4690,7 +4691,7 @@ void RTSSHOW::languagedisplayUpdate(void)
 }
 
 // looping at the loop function
-void RTSUpdate(void)
+void RTS_Update(void)
 {
   // Check the status of card
   rtscheck.RTS_SDCardUpdate();
@@ -4721,7 +4722,7 @@ void RTSUpdate(void)
 }
 /*
 #if ENABLED(LCD_RTS_SOFTWARE_AUTOSCROLL)  
-  void RTSUpdate_SCROLLING(void)
+  void RTS_Update_SCROLLING(void)
   {
       unsigned long currentMillis = millis();
       if (scrollingActive && change_page_font == 1 && currentMillis - previousScrollMillis >= scrollInterval){

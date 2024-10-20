@@ -260,10 +260,7 @@ void GcodeSuite::G28() {
     set_and_report_grblstate(M_HOMING);
   #endif
 
-  #if ENABLED(E3S1PRO_RTS)
-    home_flag = true;
-  #endif
-
+  TERN_(E3S1PRO_RTS, home_flag = true);
   TERN_(DWIN_CREALITY_LCD, dwinHomingStart());
   TERN_(EXTENSIBLE_UI, ExtUI::onHomingStart());
 

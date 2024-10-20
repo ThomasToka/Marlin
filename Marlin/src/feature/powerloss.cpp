@@ -178,6 +178,9 @@ bool PrintJobRecovery::check() {
 void PrintJobRecovery::purge() {
   init();
   card.removeJobRecoveryFile();
+  if(lcd_rts_settings.boot_zraise){
+    queue.enqueue_now_P(PSTR("M402"));
+  }
 }
 
 /**
@@ -533,9 +536,8 @@ void PrintJobRecovery::resume() {
       #define HOMING_Z_DOWN 1
     #endif
 
-    //float z_now = info.flag.raised ? z_raised : resume_pos.z + info.zraise + Z_CLEARANCE_DEPLOY_PROBE;
     #if ENABLED(E3S1PRO_RTS)
-      float z_now = info.flag.raised ? z_raised : resume_pos.z + info.zraise + lcd_rts_settings.plr_offset;
+      float z_now = info.flag.raised ? z_raised : resume_pos.z + lcd_rts_settings.plr_zraise;
     #else
       float z_now = info.flag.raised ? z_raised : resume_pos.z;
     #endif
@@ -547,9 +549,9 @@ void PrintJobRecovery::resume() {
     #endif
     #if !HOMING_Z_DOWN
       // Set Z to the real position
-      DEBUG_ECHO_MSG(">>> z_print2: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);      
+      DEBUG_ECHO_MSG(">>> z_print2: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
       PROCESS_SUBCOMMANDS_NOW(TS(F("G92.9Z"), p_float_t(z_now, 3)));
-      DEBUG_ECHO_MSG(">>> z_print3: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);      
+      DEBUG_ECHO_MSG(">>> z_print3: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
       #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
         SERIAL_ECHO_MSG("z_now !HOMING_Z_DOWN: ", z_now);
       #endif
@@ -565,7 +567,9 @@ void PrintJobRecovery::resume() {
       }
     #endif
     // Home XY with no Z raise
-    PROCESS_SUBCOMMANDS_NOW(F("G28R0XY")); // No raise during G28
+    DEBUG_ECHO_MSG(">>> z_print3a: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
+    PROCESS_SUBCOMMANDS_NOW(TS(F("G28R"), lcd_rts_settings.plr_zraise, F("XY"))); // No raise during G28
+    DEBUG_ECHO_MSG(">>> z_print3b: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);    
 
   #endif
 
@@ -817,6 +821,7 @@ void PrintJobRecovery::resume() {
 
         DEBUG_ECHOLNPGM("sd_filename: ", info.sd_filename);
         DEBUG_ECHOLNPGM("sdpos: ", info.sdpos);
+        DEBUG_ECHOLNPGM("resume_sdpos: ", resume_sdpos);
         DEBUG_ECHOLNPGM("print_job_elapsed: ", info.print_job_elapsed);
 
         DEBUG_ECHOPGM("axis_relative:");

@@ -284,13 +284,6 @@ void Endstops::not_homing() {
     } else {
       #if ENABLED(E3S1PRO_RTS)
         waitway = 0;
-        // Displays the exception interface after 3 failures
-        // jump2page_num(PG_ABNORMAL);
-        // change_page_font = PG_ABNORMAL;
-        // Failed to homing move
-        // rtscheck.RTS_SndData(Error_202, ABNORMAL_PAGE_TEXT_VP);
-        // RTS_ResetSingleVP(Window_fault_probe_VP);
-        // RTS_ResetSingleVP(Window_fault_home_VP);
         errorway = 2;
       #endif      
       TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillHome_L, ID_KillHome_D));

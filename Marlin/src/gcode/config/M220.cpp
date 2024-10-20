@@ -44,10 +44,7 @@ void GcodeSuite::M220() {
   if (parser.seen_test('B')) backup_feedrate_percentage = now_feedrate_perc;
   if (parser.seenval('S')) feedrate_percentage = parser.value_int();
 
-  #if ENABLED(E3S1PRO_RTS)
-    RTS_SendZoffsetFeedratePercentage(false);
-    //SERIAL_ECHOLNPGM("M220 S", feedrate_percentage);
-  #endif
+  TERN_(E3S1PRO_RTS, RTS_SendZoffsetFeedratePercentage(false));
 
   if (!parser.seen_any()) {
     SERIAL_ECHOLNPGM("FR:", feedrate_percentage, "%");

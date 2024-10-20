@@ -22,21 +22,18 @@
 
 #include "../../inc/MarlinConfig.h"
 
-#if HAS_MEDIA
+#if HAS_MEDIA && ENABLED(E3S1PRO_RTS)
 
 #include "../gcode.h"
 #include "../../sd/cardreader.h"
 #include "../../lcd/marlinui.h"
-
-#if ENABLED(E3S1PRO_RTS)
-  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
-  #include "../../lcd/rts/e3s1pro/preview.h"
-  uint8_t action;
-  uint8_t m19_x;
-  uint8_t m19_y;
-  uint8_t m19_f;
-  uint8_t m19_p;
-#endif
+#include "../../lcd/rts/e3s1pro/lcd_rts.h"
+#include "../../lcd/rts/e3s1pro/preview.h"
+uint8_t action;
+uint8_t m19_x;
+uint8_t m19_y;
+uint8_t m19_f;
+uint8_t m19_p;
 
 /**
  * M19: Open a file readonly without starting a print
@@ -44,7 +41,6 @@
  * The path is relative to the root directory
  */
 void GcodeSuite::M19() {
-#if ENABLED(E3S1PRO_RTS)
 if (parser.seenval('S')) action = parser.value_int();
 const char* filename_input = "OCTODGUS.GCO";
 const char* filename_output = "TEMP.GCO";
@@ -234,7 +230,7 @@ switch(action){
         {    
             if (parser.seenval('F')){
                 m19_f = parser.value_int();
-                lcd_rts_settings.plr_offset = m19_f;
+                lcd_rts_settings.plr_zraise = m19_f;
                 #if ENABLED(LCD_RTS_DEBUG_LCD)
                     SERIAL_ECHO_MSG("M19 S8 arrived F", m19_f);
                 #endif          
@@ -243,6 +239,27 @@ switch(action){
         }else{
                 #if ENABLED(LCD_RTS_DEBUG_LCD)
                     SERIAL_ECHO_MSG("M19 S8 arrived.");
+                #endif  
+        }
+    break;
+    case 9:
+        if(leveling_running == 0)
+        {    
+            if (parser.seenval('F')){
+                m19_f = parser.value_int();
+                if (m19_f == 0){
+                    lcd_rts_settings.boot_zraise = false;
+                }else if (m19_f == 1){
+                    lcd_rts_settings.boot_zraise = true;
+                }
+                #if ENABLED(LCD_RTS_DEBUG_LCD)
+                    SERIAL_ECHO_MSG("M19 S9 arrived F", m19_f);
+                #endif          
+            }
+            settings.save();
+        }else{
+                #if ENABLED(LCD_RTS_DEBUG_LCD)
+                    SERIAL_ECHO_MSG("M19 S9 arrived.");
                 #endif  
         }
     break;    
@@ -254,8 +271,6 @@ switch(action){
     break;
 }
 
-#endif
-
 }
 
-#endif // HAS_MEDIA
+#endif // HAS_MEDIA && ENABLED(E3S1PRO_RTS)
