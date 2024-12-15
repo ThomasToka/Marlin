@@ -331,7 +331,6 @@ void resetSettings() {
   lcd_rts_settings.probe_margin_y_front = 45;
   lcd_rts_settings.probe_margin_y_back = 45;
   lcd_rts_settings.external_m73 = false;
-  lcd_rts_settings.extra_probing = 0;
   lcd_rts_settings.total_probing = 3;
   lcd_rts_settings.plr_zraise = 5;
   lcd_rts_settings.boot_zraise = true;
@@ -359,7 +358,6 @@ void loadSettings(const char * const buff) {
     SERIAL_ECHOLNPGM("probe_margin y: ", lcd_rts_settings.probe_margin_y_front);
     SERIAL_ECHOLNPGM("probe_min_margin y: ", lcd_rts_settings.probe_margin_y_back);
     SERIAL_ECHOLNPGM("external m73: ", lcd_rts_settings.external_m73);
-    SERIAL_ECHOLNPGM("extra_probing: ", lcd_rts_settings.extra_probing);
     SERIAL_ECHOLNPGM("total_probing: ", lcd_rts_settings.total_probing);
     SERIAL_ECHOLNPGM("plr_zraise: ", lcd_rts_settings.plr_zraise);
     SERIAL_ECHOLNPGM("boot_zraise: ", lcd_rts_settings.boot_zraise);
@@ -386,7 +384,6 @@ void saveSettings(char * const buff) {
     SERIAL_ECHOLNPGM("probe_margin y: ", lcd_rts_settings.probe_margin_y_front);
     SERIAL_ECHOLNPGM("probe_min_margin y: ", lcd_rts_settings.probe_margin_y_back);
     SERIAL_ECHOLNPGM("external m73: ", lcd_rts_settings.external_m73);
-    SERIAL_ECHOLNPGM("extra_probing: ", lcd_rts_settings.extra_probing);
     SERIAL_ECHOLNPGM("total_probing: ", lcd_rts_settings.total_probing);
     SERIAL_ECHOLNPGM("plr_zraise: ", lcd_rts_settings.plr_zraise);
     SERIAL_ECHOLNPGM("boot_zraise: ", lcd_rts_settings.boot_zraise);

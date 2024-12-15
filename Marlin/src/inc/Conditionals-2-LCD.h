@@ -609,6 +609,10 @@
   #define HAS_STATUS_MESSAGE 1
 #endif
 
+#if ENABLED(E3S1PRO_RTS)
+  #define HAS_STATUS_MESSAGE 1
+#endif
+
 #if HAS_WIRED_LCD && !HAS_GRAPHICAL_TFT && !IS_DWIN_MARLINUI
   #define HAS_LCDPRINT 1
 #endif

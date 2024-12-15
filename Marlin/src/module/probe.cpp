@@ -787,85 +787,77 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const_float_t z_min_p
   const float z_probe_low_point = zoffs + z_min_point -float((!axis_is_trusted(Z_AXIS)) * 10);
   if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("Probe Low Point: ", z_probe_low_point);
 
-    // Double-probing does a fast probe followed by a slow probe
-    float z1 = 0.0f; // Declare z1 here to make it accessible later
+  float* probes = new float[lcd_rts_settings.total_probing]();
 
-    // Allocate memory for dynamic probing if extra_probing is greater than 0
-    float* probes = nullptr;
-    if (lcd_rts_settings.extra_probing > 0) {
-        probes = new float[lcd_rts_settings.total_probing];
+  if (lcd_rts_settings.total_probing >= 1) {
+    if (try_to_probe(PSTR("SLOW"), z_probe_low_point, MMM_TO_MMS(Z_PROBE_FEEDRATE_SLOW), sanity_check)) return NAN;
+    TERN_(MEASURE_BACKLASH_WHEN_PROBING, backlash.measure_with_probe());
+    probes[0] = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, current_position.z, largest_sensorless_adj);
+    if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("1st Probe Z: ", probes[0]);
+  }
+
+  for (int i = 1; i < lcd_rts_settings.total_probing; i++) {
+    do_z_clearance(probes[i - 1] + Z_CLEARANCE_MULTI_PROBE, false);
+    if (try_to_probe(PSTR("SLOW"), z_probe_low_point, MMM_TO_MMS(Z_PROBE_FEEDRATE_SLOW), sanity_check)) return NAN;
+    TERN_(MEASURE_BACKLASH_WHEN_PROBING, backlash.measure_with_probe());
+    probes[i] = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, current_position.z, largest_sensorless_adj);
+    if (DEBUGGING(LEVELING)) SERIAL_ECHOLNPGM("Probe[", i, "] Z: ",  probes[i]);
+  }
+
+  float measured_z = 0.0f;
+  if (lcd_rts_settings.total_probing > 2) {
+    // Calculate median
+    static const int PHALF = (lcd_rts_settings.total_probing - 1) / 2;
+    const float middle = probes[PHALF];
+    const float median = (lcd_rts_settings.total_probing & 1) ? middle : (middle + probes[PHALF + 1]) * 0.5f;
+    // Adjust range to remove outliers
+    uint8_t min_avg_idx = 0, max_avg_idx = lcd_rts_settings.total_probing - 1;
+    if (fabs(probes[max_avg_idx] - median) > fabs(probes[min_avg_idx] - median))
+        max_avg_idx--;
+    else
+        min_avg_idx++;
+    if (DEBUGGING(LEVELING)) {
+      SERIAL_ECHOLNPGM("Excluded Probes: ");
+      for (uint8_t i = 0; i < lcd_rts_settings.total_probing; ++i) {
+        if (i < min_avg_idx || i > max_avg_idx) {
+          SERIAL_ECHOLNPGM("Probe[", i, "] Z: ",  probes[i]);
+        }
+      }
+      SERIAL_ECHOLNPGM("Included Probes: ");
+      for (uint8_t i = min_avg_idx; i <= max_avg_idx; ++i) {
+        SERIAL_ECHOLNPGM("Probe[", i, "] Z: ",  probes[i]);
+      }
     }
-
-    // Double-probing does a fast probe followed by a slow probe
+    // Compute the sum of the filtered values
+    for (uint8_t i = min_avg_idx; i <= max_avg_idx; ++i)
+      measured_z += probes[i];
+    measured_z /= (max_avg_idx - min_avg_idx + 1);
+  } else {
+    if (DEBUGGING(LEVELING)) {
+      SERIAL_ECHOLNPGM("Probe result: ");
+      for (int i = 0; i < lcd_rts_settings.total_probing; i++) {
+        SERIAL_ECHOLNPGM("Probe[", i, "] Z: ",  probes[i]);
+      }
+    }
     if (lcd_rts_settings.total_probing == 2) {
-        // Attempt to tare the probe
-        if (TERN0(PROBE_TARE, tare())) return NAN;
-
-        // Do a first probe at the fast speed
-        if (try_to_probe(PSTR("FAST"), z_probe_low_point, z_probe_fast_mm_s, sanity_check)) return NAN;
-
-        z1 = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, current_position.z, largest_sensorless_adj);
-        if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("1st Probe Z:", z1);
-
-        // Raise to give the probe clearance
-        do_z_clearance(z1 + (Z_CLEARANCE_MULTI_PROBE), false);
-
-        // Probe downward slowly to find the bed for the second time
-        if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("Slow Probe:");
-        if (try_to_probe(PSTR("SLOW"), z_probe_low_point, MMM_TO_MMS(Z_PROBE_FEEDRATE_SLOW), sanity_check)) return NAN;
-
-        TERN_(MEASURE_BACKLASH_WHEN_PROBING, backlash.measure_with_probe());
-
-        const float z2 = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, current_position.z, largest_sensorless_adj);
-        if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("2nd Probe Z:", z2, " Discrepancy:", z1 - z2);
-
-        // Weighted average of the fast and slow probes
-        return (z2 * 3.0f + z1 * 2.0f) * 0.2f;
+      // Return a weighted average of the first two slow probes
+      measured_z = (probes[1] * 3.0f + probes[0] * 2.0f) * 0.2f;
     } else {
-        float probes_z_sum = 0.0f;
-        // Loop for the total number of probes
-        for (uint8_t p = 0; p < lcd_rts_settings.total_probing; p++) {
-            // If the probe won't tare, return
-            if (TERN0(PROBE_TARE, tare())) return true;
-
-            // Probe downward slowly to find the bed
-            if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("Probe:");
-            if (try_to_probe(PSTR("SLOW"), z_probe_low_point, MMM_TO_MMS(Z_PROBE_FEEDRATE_SLOW), sanity_check)) return NAN;
-
-            TERN_(MEASURE_BACKLASH_WHEN_PROBING, backlash.measure_with_probe());
-
-            const float z = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, current_position.z, largest_sensorless_adj);
-
-            if (lcd_rts_settings.extra_probing > 0) {
-                // Insert Z measurement into probes[]. Keep it sorted ascending.
-                for (uint8_t i = 0; i <= p; ++i) {
-                    if (i == p || probes[i] > z) {
-                        for (int8_t m = p; --m >= i;) probes[m + 1] = probes[m];
-                        probes[i] = z;
-                        break;
-                    }
-                }
-            } else {
-                probes_z_sum += z;
-            }
-
-            // Small Z raise after each probe, except the last one
-            if (p < lcd_rts_settings.total_probing - 1) {
-                do_z_clearance(z + (Z_CLEARANCE_MULTI_PROBE), false);
-            }
-        }
-
-        // Calculate the final measured Z value
-        float measured_z = probes_z_sum / lcd_rts_settings.total_probing;
-
-        // Clean up
-        if (probes) {
-            delete[] probes;
-        }
-
-        return DIFF_TERN(HAS_HOTEND_OFFSET, measured_z, hotend_offset[active_extruder].z);
+      // in case of one probe, measured_z is the first probe probes[0]
+      measured_z = probes[0];
     }
-}
+  }
+
+  if (DEBUGGING(LEVELING)) {
+    SERIAL_ECHOLNPGM("Final Measured Z: ");
+    SERIAL_ECHO(measured_z);
+    SERIAL_EOL();
+  }
+
+  delete[] probes;
+  return DIFF_TERN(HAS_HOTEND_OFFSET, measured_z, hotend_offset[active_extruder].z);
+
+  }
 
 #if DO_TOOLCHANGE_FOR_PROBING
 
@@ -970,7 +962,14 @@ float Probe::probe_at_point(
       if (bltouch.triggered()) bltouch._reset();
     #endif
 
-    measured_z = deploy() ? NAN : run_z_probe(sanity_check, z_min_point, z_clearance) + offset.z;
+    if (deploy()) {
+        measured_z = run_z_probe(sanity_check, z_min_point, z_clearance) + offset.z;
+        if (DEBUGGING(LEVELING)) SERIAL_ECHOLNPGM("FORK: deploy measured_z: ", measured_z);
+    } else {
+        bltouch._deploy();
+        measured_z = deploy() ? NAN : run_z_probe(sanity_check, z_min_point, z_clearance) + offset.z;
+        if (DEBUGGING(LEVELING)) SERIAL_ECHOLNPGM("FORK: deploy after bug measured_z: ", measured_z);
+    }
 
     // Deploy succeeded and a successful measurement was done.
     // Raise and/or stow the probe depending on 'raise_after' and settings.
