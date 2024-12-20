@@ -226,7 +226,8 @@ namespace LanguageNarrow_ru {
   LSTR MSG_UBL_7_SAVE_MESH                  = _UxGT("7.Сохранить сетку");
 
   LSTR MSG_LED_CONTROL                      = _UxGT("Настройка подсветки");
-  LSTR MSG_LEDS                             = _UxGT("Подсветка");
+  LSTR MSG_LIGHTS                           = _UxGT("Подсветка");
+  LSTR MSG_LIGHT_N                          = _UxGT("Свет #{");
   LSTR MSG_LED_PRESETS                      = _UxGT("Предустановки света");
   LSTR MSG_SET_LEDS_RED                     = _UxGT("Красный");
   LSTR MSG_SET_LEDS_ORANGE                  = _UxGT("Оранжевый");
@@ -238,7 +239,6 @@ namespace LanguageNarrow_ru {
   LSTR MSG_SET_LEDS_WHITE                   = _UxGT("Белый");
   LSTR MSG_SET_LEDS_DEFAULT                 = _UxGT("Свет по умолчанию");
   LSTR MSG_LED_CHANNEL_N                    = _UxGT("Канал {");
-  LSTR MSG_LEDS2                            = _UxGT("Свет #2");
   LSTR MSG_NEO2_PRESETS                     = _UxGT("Свет #2 предустан.");
   LSTR MSG_NEO2_BRIGHTNESS                  = _UxGT("Яркость");
   LSTR MSG_CUSTOM_LEDS                      = _UxGT("Свой цвет подсветки");
@@ -465,6 +465,7 @@ namespace LanguageNarrow_ru {
   LSTR MSG_ZPROBE_XOFFSET                   = _UxGT("Смещение X");
   LSTR MSG_ZPROBE_YOFFSET                   = _UxGT("Смещение Y");
   LSTR MSG_ZPROBE_ZOFFSET                   = _UxGT("Смещение Z");
+  LSTR MSG_ZPROBE_OFFSET_N                  = _UxGT("Смещение @");
   LSTR MSG_BABYSTEP_PROBE_Z                 = _UxGT("Шаг Z смещения");
   LSTR MSG_MOVE_NOZZLE_TO_BED               = _UxGT("Двиг. сопло к столу");
   LSTR MSG_BABYSTEP_X                       = _UxGT("Микрошаг X");
@@ -720,10 +721,10 @@ namespace LanguageNarrow_ru {
   LSTR MSG_MPC_AMBIENT_XFER_COEFF_FAN       = _UxGT("Коэфф.кулера");
   LSTR MSG_MPC_AMBIENT_XFER_COEFF_FAN_E     = _UxGT("Коэфф.кулер *");
   LSTR MSG_INPUT_SHAPING                    = _UxGT("Input Shaping");
-  LSTR MSG_SHAPING_ENABLE                   = _UxGT("Включить шейпинг @");
-  LSTR MSG_SHAPING_DISABLE                  = _UxGT("Выключить шейпинг @");
-  LSTR MSG_SHAPING_FREQ                     = _UxGT("@ частота");
-  LSTR MSG_SHAPING_ZETA                     = _UxGT("@ подавление");
+  LSTR MSG_SHAPING_ENABLE_N                 = _UxGT("Включить шейпинг @");
+  LSTR MSG_SHAPING_DISABLE_N                = _UxGT("Выключить шейпинг @");
+  LSTR MSG_SHAPING_FREQ_N                   = _UxGT("@ частота");
+  LSTR MSG_SHAPING_ZETA_N                   = _UxGT("@ подавление");
   LSTR MSG_FILAMENT_EN                      = _UxGT("Филамент *");
   LSTR MSG_SEGMENTS_PER_SECOND              = _UxGT("Сегментов/сек");
   LSTR MSG_DRAW_MIN_X                       = _UxGT("Рисовать мин X");

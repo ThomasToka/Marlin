@@ -55,10 +55,10 @@ MarlinUI ui;
 #endif
 
 #if ENABLED(LCD_PROGRESS_BAR) && !IS_TFTGLCD_PANEL
-  #define BASIC_PROGRESS_BAR 1
+  #define HAS_BASIC_PROGRESS_BAR 1
 #endif
 
-#if ANY(HAS_DISPLAY, HAS_STATUS_MESSAGE, BASIC_PROGRESS_BAR)
+#if ANY(HAS_DISPLAY, HAS_STATUS_MESSAGE, HAS_BASIC_PROGRESS_BAR)
   #include "../module/printcounter.h"
 #endif
 
@@ -93,7 +93,7 @@ constexpr uint8_t epps = ENCODER_PULSES_PER_STEP;
 #endif
 
 #if HAS_MULTI_LANGUAGE
-  uint8_t MarlinUI::language; // Initialized by settings.load()
+  uint8_t MarlinUI::language; // Initialized by settings.load
   void MarlinUI::set_language(const uint8_t lang) {
     if (lang < NUM_LANGUAGES) {
       language = lang;
@@ -105,7 +105,7 @@ constexpr uint8_t epps = ENCODER_PULSES_PER_STEP;
 #endif
 
 #if HAS_LCD_CONTRAST
-  uint8_t MarlinUI::contrast = LCD_CONTRAST_DEFAULT; // Initialized by settings.load()
+  uint8_t MarlinUI::contrast = LCD_CONTRAST_DEFAULT; // Initialized by settings.load
   void MarlinUI::set_contrast(const uint8_t value) {
     contrast = constrain(value, LCD_CONTRAST_MIN, LCD_CONTRAST_MAX);
     _set_contrast();
@@ -138,7 +138,7 @@ constexpr uint8_t epps = ENCODER_PULSES_PER_STEP;
 #if HAS_PREHEAT
   #include "../module/temperature.h"
 
-  preheat_t MarlinUI::material_preset[PREHEAT_COUNT];  // Initialized by settings.load()
+  preheat_t MarlinUI::material_preset[PREHEAT_COUNT];  // Initialized by settings.load
 
   FSTR_P MarlinUI::get_preheat_label(const uint8_t m) {
     #define _PDEF(N) static PGMSTR(preheat_##N##_label, PREHEAT_##N##_LABEL);
@@ -189,7 +189,7 @@ constexpr uint8_t epps = ENCODER_PULSES_PER_STEP;
 #if HAS_BACKLIGHT_TIMEOUT
 
   #if ENABLED(EDITABLE_DISPLAY_TIMEOUT)
-    uint8_t MarlinUI::backlight_timeout_minutes; // Initialized by settings.load()
+    uint8_t MarlinUI::backlight_timeout_minutes; // Initialized by settings.load
   #else
     constexpr uint8_t MarlinUI::backlight_timeout_minutes;
   #endif
@@ -209,7 +209,7 @@ constexpr uint8_t epps = ENCODER_PULSES_PER_STEP;
 #elif HAS_DISPLAY_SLEEP
 
   #if ENABLED(EDITABLE_DISPLAY_TIMEOUT)
-    uint8_t MarlinUI::sleep_timeout_minutes; // Initialized by settings.load()
+    uint8_t MarlinUI::sleep_timeout_minutes; // Initialized by settings.load
   #else
     constexpr uint8_t MarlinUI::sleep_timeout_minutes;
   #endif
@@ -598,7 +598,7 @@ void MarlinUI::init() {
    * This is very display-dependent, so the lcd implementation draws this.
    */
 
-  #if BASIC_PROGRESS_BAR
+  #if HAS_BASIC_PROGRESS_BAR
     millis_t MarlinUI::progress_bar_ms; // = 0
     #if PROGRESS_MSG_EXPIRE > 0
       millis_t MarlinUI::expire_status_ms; // = 0
@@ -607,7 +607,7 @@ void MarlinUI::init() {
 
   void MarlinUI::status_screen() {
 
-    #if BASIC_PROGRESS_BAR
+    #if HAS_BASIC_PROGRESS_BAR
 
       //
       // HD44780 implements the following message blinking and
@@ -647,7 +647,7 @@ void MarlinUI::init() {
 
       #endif // PROGRESS_MSG_EXPIRE
 
-    #endif // BASIC_PROGRESS_BAR
+    #endif // HAS_BASIC_PROGRESS_BAR
 
     bool did_expire = status_reset_callback && (*status_reset_callback)();
 
@@ -957,11 +957,13 @@ void MarlinUI::init() {
       // If the action button is pressed...
       static bool wait_for_unclick; // = false
 
+      // Set lcd_clicked for most clicks.
+      // Ignore the click when clearing wait_for_user or waking the screen.
       auto do_click = [&]{
-        wait_for_unclick = true;                        //  - Set debounce flag to ignore continuous clicks
-        lcd_clicked = !wait_for_user;                   //  - Keep the click if not waiting for a user-click
-        wait_for_user = false;                          //  - Any click clears wait for user
-        quick_feedback();                               //  - Always make a click sound
+        wait_for_unclick = true;
+        lcd_clicked = !wait_for_user && !display_is_asleep();
+        wait_for_user = false;
+        quick_feedback();
       };
 
       #if HAS_TOUCH_BUTTONS
@@ -1590,11 +1592,11 @@ void MarlinUI::host_notify(const char * const cstr) {
 
     #if HAS_WIRED_LCD
 
-      #if BASIC_PROGRESS_BAR || ALL(FILAMENT_LCD_DISPLAY, HAS_MEDIA)
+      #if HAS_BASIC_PROGRESS_BAR || ALL(FILAMENT_LCD_DISPLAY, HAS_MEDIA)
         const millis_t ms = millis();
       #endif
 
-      #if BASIC_PROGRESS_BAR
+      #if HAS_BASIC_PROGRESS_BAR
         progress_bar_ms = ms;
         #if PROGRESS_MSG_EXPIRE > 0
           expire_status_ms = persist ? 0 : ms + PROGRESS_MSG_EXPIRE;

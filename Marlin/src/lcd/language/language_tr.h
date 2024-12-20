@@ -274,7 +274,8 @@ namespace LanguageNarrow_tr {
   LSTR MSG_UBL_7_SAVE_MESH                = _UxGT("7.Tabla Mesh Kaydet");
 
   LSTR MSG_LED_CONTROL                    = _UxGT("LED Kontrolü");
-  LSTR MSG_LEDS                           = _UxGT("LEDler");
+  LSTR MSG_LIGHTS                         = _UxGT("LEDler");
+  LSTR MSG_LIGHT_N                        = _UxGT("Işıklar #{");
   LSTR MSG_LED_PRESETS                    = _UxGT("LED Hazır Ayarları");
   LSTR MSG_SET_LEDS_RED                   = _UxGT("Kırmızı");
   LSTR MSG_SET_LEDS_ORANGE                = _UxGT("Turuncu");
@@ -286,7 +287,6 @@ namespace LanguageNarrow_tr {
   LSTR MSG_SET_LEDS_WHITE                 = _UxGT("Beyaz");
   LSTR MSG_SET_LEDS_DEFAULT               = _UxGT("Varsayılan");
   LSTR MSG_LED_CHANNEL_N                  = _UxGT("Kanal {");
-  LSTR MSG_LEDS2                          = _UxGT("Işıklar #2");
   LSTR MSG_NEO2_PRESETS                   = _UxGT("Işık #2 Ön Ayarları");
   LSTR MSG_NEO2_BRIGHTNESS                = _UxGT("Parlaklık");
   LSTR MSG_CUSTOM_LEDS                    = _UxGT("Özel Işıklar");
@@ -397,10 +397,10 @@ namespace LanguageNarrow_tr {
   LSTR MSG_A_RETRACT                      = _UxGT("G.Çekme Hızı");
   LSTR MSG_A_TRAVEL                       = _UxGT("Gezinme Hızı");
   LSTR MSG_INPUT_SHAPING                  = _UxGT("Input Shaping");
-  LSTR MSG_SHAPING_ENABLE                 = _UxGT("@ Biçimlemeyi Aç");
-  LSTR MSG_SHAPING_DISABLE                = _UxGT("@ Biçimlemeyi Kapat");
-  LSTR MSG_SHAPING_FREQ                   = _UxGT("@ frekans");
-  LSTR MSG_SHAPING_ZETA                   = _UxGT("@ sönümleme");
+  LSTR MSG_SHAPING_ENABLE_N               = _UxGT("@ Biçimlemeyi Aç");
+  LSTR MSG_SHAPING_DISABLE_N              = _UxGT("@ Biçimlemeyi Kapat");
+  LSTR MSG_SHAPING_FREQ_N                 = _UxGT("@ frekans");
+  LSTR MSG_SHAPING_ZETA_N                 = _UxGT("@ sönümleme");
   LSTR MSG_SHAPING_A_FREQ                 = STR_A _UxGT(" frekansı");   // ProUI
   LSTR MSG_SHAPING_B_FREQ                 = STR_B _UxGT(" frekansı");   // ProUI
   LSTR MSG_SHAPING_C_FREQ                 = STR_C _UxGT(" frekansı");   // ProUI
@@ -586,6 +586,7 @@ namespace LanguageNarrow_tr {
   LSTR MSG_ZPROBE_XOFFSET                 = _UxGT("X Prob Ofseti");
   LSTR MSG_ZPROBE_YOFFSET                 = _UxGT("Y Prob Ofseti");
   LSTR MSG_ZPROBE_ZOFFSET                 = _UxGT("Z Prob Ofseti");
+  LSTR MSG_ZPROBE_OFFSET_N                = _UxGT("@ Prob Ofseti");
   LSTR MSG_BABYSTEP_PROBE_Z               = _UxGT("Z ayarı adımsal");
   LSTR MSG_ZPROBE_MARGIN                  = _UxGT("Prob Payı");
   LSTR MSG_Z_FEED_RATE                    = _UxGT("Z İlerleme Hızı");

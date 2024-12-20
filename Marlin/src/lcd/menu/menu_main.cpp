@@ -72,7 +72,7 @@ void menu_motion();
 void menu_temperature();
 void menu_configuration();
 
-#if HAS_LEVELING || HAS_BED_PROBE
+#if ANY(HAS_LEVELING, HAS_BED_PROBE, ASSISTED_TRAMMING_WIZARD, LCD_BED_TRAMMING)
   void menu_probe_level();
 #endif
 
@@ -338,7 +338,7 @@ void menu_main() {
 
     SUBMENU(MSG_MOTION, menu_motion);
 
-    #if HAS_LEVELING || HAS_BED_PROBE
+    #if ANY(HAS_LEVELING, HAS_BED_PROBE, ASSISTED_TRAMMING_WIZARD, LCD_BED_TRAMMING)
       SUBMENU(MSG_PROBE_AND_LEVEL, menu_probe_level);
     #endif
   }
@@ -386,7 +386,7 @@ void menu_main() {
   #endif
 
   #if ENABLED(LED_CONTROL_MENU)
-    SUBMENU(MSG_LEDS, menu_led);
+    SUBMENU(MSG_LIGHTS, menu_led);
   #elif ALL(CASE_LIGHT_MENU, CASELIGHT_USES_BRIGHTNESS)
     SUBMENU(MSG_CASE_LIGHT, menu_case_light);
   #elif ENABLED(CASE_LIGHT_MENU)
