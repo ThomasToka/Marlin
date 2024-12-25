@@ -380,19 +380,6 @@ void startOrResumeJob() {
     IF_DISABLED(NO_SD_AUTOSTART, card.autofile_cancel());
     card.abortFilePrintNow(TERN_(SD_RESORT, true));
 
-    #if ENABLED(E3S1PRO_RTS)
-      #if ENABLED(LASER_FEATURE)
-        if(laser_device.is_laser_device())
-        {
-        }else
-      #endif
-      {
-	      thermalManager.setTargetHotend(0, 0);
-	      thermalManager.setTargetBed(0);
-	      thermalManager.zero_fan_speeds();
-  	  }
-    #endif
-
     queue.clear();
     quickstop_stepper();
 

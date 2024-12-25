@@ -37,29 +37,35 @@
 void GcodeSuite::M117() {
 
   #if ENABLED(E3S1PRO_RTS)
-    if (parser.string_arg[0] == 'L' && isdigit(parser.string_arg[1])) {
+    if (parser.string_arg[0] == 'L' && (isdigit(parser.string_arg[1]) || (parser.string_arg[1] == '-' && isdigit(parser.string_arg[2])))) {
       bool hasL = false, hasG = false, hasM = false;
-      uint16_t m117_layer = 0, picFilament_g_todo = 0, picFilament_m_todo = 0;
+      int16_t m117_layer = 0;
+      uint16_t picFilament_g_todo = 0, picFilament_m_todo = 0;
       // Check for the presence of 'L', 'G', and 'M' commands
       for (int i = 0; parser.string_arg[i] != '\0'; ++i) {
-          if ((parser.string_arg[i] == 'L' || parser.string_arg[i] == 'G' || parser.string_arg[i] == 'M' || parser.string_arg[i] == 'Q' || parser.string_arg[i] == 'Z') && isdigit(parser.string_arg[i + 1])) {
+          if ((parser.string_arg[i] == 'L' || parser.string_arg[i] == 'G' || parser.string_arg[i] == 'M' || parser.string_arg[i] == 'Q' || parser.string_arg[i] == 'Z') &&
+              (isdigit(parser.string_arg[i + 1]) || (parser.string_arg[i + 1] == '-' && isdigit(parser.string_arg[i + 2])))) {
+
               int start = i + 1;
               int end = start;
               bool isFloat = false;
+
               while (isdigit(parser.string_arg[end]) || parser.string_arg[end] == '.') {
                   if (parser.string_arg[end] == '.') {
                       isFloat = true;
                   }
                   ++end;
               }
-              char number_str[20];  // Adjust the buffer size to accommodate float
+
+              char number_str[20];  // Adjust buffer size as needed
               strncpy(number_str, parser.string_arg + start, end - start);
               number_str[end - start] = '\0';
+
               if (isFloat) {
                   float number = strtof(number_str, nullptr);  // Parse as float
                   if (parser.string_arg[i] == 'Z') {
                     picLayerHeight = number;  // Float for Z variable
-                    #if ENABLED(LCD_RTS_DEBUG_LCD)   
+                    #if ENABLED(LCD_RTS_DEBUG_LCD)
                       SERIAL_ECHO_MSG("picLayerHeight: ", picLayerHeight);
                     #endif
                   }
@@ -76,7 +82,7 @@ void GcodeSuite::M117() {
                       picFilament_m_todo = number;  // Integer for M variable
                   } else if (parser.string_arg[i] == 'Q') {
                       picLayers = number;  // Integer for Q variable
-                      #if ENABLED(LCD_RTS_DEBUG_LCD)                      
+                      #if ENABLED(LCD_RTS_DEBUG_LCD)
                         SERIAL_ECHO_MSG("picLayers: ", picLayers);
                       #endif
                   }

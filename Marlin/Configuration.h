@@ -69,7 +69,7 @@
 //#define ENDER_3S1_PRO
 //#define ENDER_3S1_PLUS
 //#define ENDER_3S1
-#define FORK_VERSION "v030"
+#define FORK_VERSION "v031"
 
 // Choose the name from boards.h that matches your setup
 #define USER_STM32F401  1

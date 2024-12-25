@@ -41,8 +41,6 @@
 void GcodeSuite::M23() {
   // Simplify3D includes the size, so zero out all spaces (#7227)
   for (char *fn = parser.string_arg; *fn; ++fn) if (*fn == ' ') *fn = '\0';
-  card.openFileRead(parser.string_arg);
-
   #if ENABLED(E3S1PRO_RTS)
     #if ENABLED(FILAMENT_RUNOUT_SENSOR)
       if(runout.enabled == true)
@@ -51,6 +49,8 @@ void GcodeSuite::M23() {
       }
     #endif
   #endif
+  
+  card.openFileRead(parser.string_arg);
 
   TERN_(SET_PROGRESS_PERCENT, ui.set_progress(0));
 }

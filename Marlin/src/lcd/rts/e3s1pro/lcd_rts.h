@@ -31,9 +31,7 @@ extern bool power_off_type_yes;
 #define FHLENG  (0x06)
 #define TEXTBYTELEN     55
 #define MaxFileNumber   40
-//#if ENABLED(LCD_RTS_SOFTWARE_AUTOSCROLL) 
 #define MaxFilenameLength   128
-//#endif
 #define VALUE_INVALID                       0xFFFF
 #define VALUE_INVALID_8BIT                  0xFF
 
@@ -537,10 +535,8 @@ typedef struct CardRecord
   int Filesum;
   unsigned long addr[FileNum];
   char Cardshowfilename[FileNum][FileNameLen];
-  //#if ENABLED(LCD_RTS_SOFTWARE_AUTOSCROLL)   
-    char* Cardshowlongfilename[FileNum];
-    int filenamelen[MaxFilenameLength];
-  //#endif
+  char* Cardshowlongfilename[FileNum];
+  int filenamelen[MaxFilenameLength];
   char Cardfilename[FileNum][FileNameLen];
   bool selectFlag;
 }CRec;
@@ -561,7 +557,6 @@ uint8_t probe_margin_x;
 uint8_t probe_margin_y_front;
 uint8_t probe_margin_y_back;
 bool external_m73;
-uint8_t extra_probing;
 uint8_t total_probing;
 uint8_t plr_zraise;
 bool boot_zraise;
@@ -828,9 +823,6 @@ const unsigned long Addrbuf[] =
 extern int EndsWith(const char*, const char*);
 void ErrorHanding(void);
 extern void RTS_Update(void);
-//#if ENABLED(LCD_RTS_SOFTWARE_AUTOSCROLL)
-//  extern void RTS_Update_SCROLLING(void);
-//#endif
 extern void RTSInit(void);
 #if HAS_CUTTER
   extern void RTS_UpdateLaser(void);
@@ -918,9 +910,6 @@ extern unsigned int picFilament_m;
 extern unsigned int picFilament_g;
 extern float picLayerHeight;
 extern uint8_t settingsload;
-//#if ENABLED(LCD_RTS_SOFTWARE_AUTOSCROLL)
-//  void lcd_rts_scrolling();
-//#endif
 extern lcd_rts_settings_t lcd_rts_settings;
 void saveSettings(char * const buff);
 void loadSettings(const char * const buff);

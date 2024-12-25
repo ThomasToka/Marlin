@@ -82,6 +82,8 @@ void event_filament_runout(const uint8_t extruder) {
 
   if (did_pause_print) return;  // Action already in progress. Purge triggered repeated runout.
 
+  TERN_(E3S1PRO_RTS, if (settingsload == 1) return;);
+  
   #if ENABLED(TOOLCHANGE_MIGRATION_FEATURE)
     if (migration.in_progress) {
       DEBUG_ECHOLNPGM("Migration Already In Progress");
