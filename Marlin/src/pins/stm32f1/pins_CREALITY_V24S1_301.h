@@ -92,21 +92,6 @@
 // M3/M4/M5 - Spindle/Laser Control
 //
 #if HAS_CUTTER
-
-  #define IIC_BL24CXX_EEPROM                      // EEPROM on I2C-0
-  #if ENABLED(IIC_BL24CXX_EEPROM)
-    #define IIC_EEPROM_SDA                    PA11
-    #define IIC_EEPROM_SCL                    PA12
-    #define MARLIN_EEPROM_SIZE                0x800  // 2Kb (24C16)
-  #elif ENABLED(SDCARD_EEPROM_EMULATION)
-    #define MARLIN_EEPROM_SIZE                0x800  // 2Kb
-  #endif
-
-  //#define EEPROM_PLR
-  #if ENABLED(EEPROM_PLR)
-    #define PLR_ADDR 800
-  #endif
-
   //#define HEATER_0_PIN                    -1
   //#define HEATER_BED_PIN                  -1
   #define FAN0_PIN                          PA0

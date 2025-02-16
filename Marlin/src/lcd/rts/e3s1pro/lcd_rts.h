@@ -905,7 +905,7 @@ extern uint8_t color_sp_offset;
 extern uint8_t min_margin_y_front;
 extern uint8_t min_margin_y_back;
 extern uint8_t min_margin_x;
-extern unsigned int picLayers;    // picture layers
+extern int picLayers;    // picture layers
 extern unsigned int picFilament_m;
 extern unsigned int picFilament_g;
 extern float picLayerHeight;

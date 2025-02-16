@@ -15,7 +15,7 @@
 //#define LCD_RTS_DEBUG_PRINTTIME
 //#define LCD_RTS_DEBUG_LEVELING
 
-#include <Wstring.h>
+#include <WString.h>
 #include <stdio.h>
 #include <string.h>
 //#include <Arduino.h>
@@ -148,7 +148,7 @@ uint16_t min_calc_margin_y_bedlevel;
 uint16_t max_reachable_pos_x;
 uint16_t min_calc_margin_x_bedlevel;
 
-unsigned int picLayers = 0;   // picture end line
+int picLayers = 0;   // picture end line
 unsigned int picFilament_m = 0;
 unsigned int picFilament_g = 0;
 float picLayerHeight = 0.0f;
@@ -303,7 +303,7 @@ void resetSettings() {
   lcd_rts_settings.probe_margin_y_front = 45;
   lcd_rts_settings.probe_margin_y_back = 45;
   lcd_rts_settings.external_m73 = false;
-  lcd_rts_settings.total_probing = 3;
+  lcd_rts_settings.total_probing = 5;
   lcd_rts_settings.plr_zraise = 5;
   lcd_rts_settings.boot_zraise = true;
   //lcd_rts_settings.hotend_fan = 255;  
@@ -4045,11 +4045,7 @@ void RTSSHOW::RTS_HandleData(void)
           laser_device.laser_power_open();
         }else if(recdat.data[0] == 0x06)
         {
-          if(change_page_font == 33){
-            RTS_ShowPage(33);
-          }else{
-            RTS_ShowPage(50);
-          }
+          RTS_ShowPage(33);
         }
         else if(recdat.data[0] == 0x0B)
         {

@@ -1,7 +1,7 @@
 #include "stdio.h"
 #include <stdio.h>
-#include <arduino.h>
-#include <wstring.h>
+#include <Arduino.h>
+#include <WString.h>
 #include "lcd_rts.h"
 #include "../../../inc/MarlinConfig.h"
 #include "../../../sd/cardreader.h"

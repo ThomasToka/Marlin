@@ -49,8 +49,7 @@ void GcodeSuite::M117() {
               int start = i + 1;
               int end = start;
               bool isFloat = false;
-
-              while (isdigit(parser.string_arg[end]) || parser.string_arg[end] == '.') {
+              while (isdigit(parser.string_arg[end]) || parser.string_arg[end] == '.' || (end == start && parser.string_arg[end] == '-')) {
                   if (parser.string_arg[end] == '.') {
                       isFloat = true;
                   }

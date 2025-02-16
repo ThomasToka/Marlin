@@ -69,18 +69,18 @@
 //#define ENDER_3S1_PRO
 //#define ENDER_3S1_PLUS
 //#define ENDER_3S1
-#define FORK_VERSION "v031"
+#define FORK_VERSION "v032"
 
 // Choose the name from boards.h that matches your setup
-#define USER_STM32F401  1
+#define USER_STM32F401 1
 #ifdef USER_STM32F401
   #define MOTHERBOARD BOARD_CREALITY_V24S1_301F4
 #endif
-//#define USER_STM32F103RE  1
-//#define USER_STM32F103RC  1
-#if defined(USER_STM32F103RE) || defined(USER_STM32F103RC)
-  #define MOTHERBOARD BOARD_CREALITY_V24S1_301
-#endif
+//#define USER_STM32F103RE 1
+//#define USER_STM32F103RC 1
+//#if defined(USER_STM32F103RE) || defined(USER_STM32F103RC)
+//  #define MOTHERBOARD BOARD_CREALITY_V24S1_301
+//#endif
 //#define WATCHDOG_DURATION_8S
 //
 // Ender-3S1Pro touch display. Uses lcd_rts.cpp.
