@@ -776,6 +776,10 @@
   #define MAX31865_SENSOR_OHMS_2      100
   #define MAX31865_CALIBRATION_OHMS_2 430
 #endif
+#if TEMP_SENSOR_IS_MAX_TC(BED)
+  #define MAX31865_SENSOR_OHMS_BED      100
+  #define MAX31865_CALIBRATION_OHMS_BED 430
+#endif
 
 #if HAS_E_TEMP_SENSOR
   #define TEMP_RESIDENCY_TIME         10  // (seconds) Time to wait for hotend to "settle" in M109
@@ -1702,7 +1706,6 @@
  * For information about this sensor https://github.com/bigtreetech/MicroProbe
  *
  * Also requires PROBE_ENABLE_DISABLE
- * With FT_MOTION requires ENDSTOP_INTERRUPTS_FEATURE
  */
 //#define BIQU_MICROPROBE_V1  // Triggers HIGH
 //#define BIQU_MICROPROBE_V2  // Triggers LOW
@@ -2361,6 +2364,12 @@
 //#define AUTO_BED_LEVELING_BILINEAR
 //#define AUTO_BED_LEVELING_UBL
 //#define MESH_BED_LEVELING
+
+/**
+ * Commands to execute at the start of G29 probing,
+ * after switching to the PROBING_TOOL.
+ */
+//#define EVENT_GCODE_BEFORE_G29 "M300 P440 S200"
 
 /**
  * Commands to execute at the end of G29 probing.
@@ -3510,14 +3519,14 @@
 //
 // Tiny, but very sharp OLED display
 //
-//#define MKS_12864OLED          // Uses the SH1106 controller (default)
+//#define MKS_12864OLED          // Uses the SH1106 controller
 //#define MKS_12864OLED_SSD1306  // Uses the SSD1306 controller
 
 //
 // Zonestar OLED 128×64 Full Graphics Controller
 //
 //#define ZONESTAR_12864LCD           // Graphical (DOGM) with ST7920 controller
-//#define ZONESTAR_12864OLED          // 1.3" OLED with SH1106 controller (default)
+//#define ZONESTAR_12864OLED          // 1.3" OLED with SH1106 controller
 //#define ZONESTAR_12864OLED_SSD1306  // 0.96" OLED with SSD1306 controller
 
 //
@@ -3766,7 +3775,7 @@
 
 #if ENABLED(TFT_COLOR_UI)
   /**
-   * TFT Font for Color_UI. Choose one of the following:
+   * TFT Font for Color UI. Choose one of the following:
    *
    * NOTOSANS  - Default font with anti-aliasing. Supports Latin Extended and non-Latin characters.
    * UNIFONT   - Lightweight font, no anti-aliasing. Supports Latin Extended and non-Latin characters.
@@ -3775,7 +3784,7 @@
   #define TFT_FONT  NOTOSANS
 
   /**
-   * TFT Theme for Color_UI. Choose one of the following or add a new one to 'Marlin/src/lcd/tft/themes' directory
+   * TFT Theme for Color UI. Choose one of the following or add a new one to 'Marlin/src/lcd/tft/themes' directory
    *
    * BLUE_MARLIN  - Default theme with 'midnight blue' background
    * BLACK_MARLIN - Theme with 'black' background
@@ -3851,7 +3860,9 @@
 // https://reprapworld.com/products/electronics/ramps/keypad_v1_0_fully_assembled/
 //
 //#define REPRAPWORLD_KEYPAD
-//#define REPRAPWORLD_KEYPAD_MOVE_STEP 10.0 // (mm) Distance to move per key-press
+#if ENABLED(REPRAPWORLD_KEYPAD)
+  //#define REPRAPWORLD_KEYPAD_MOVE_STEP 10.0 // (mm) Distance to move per key-press
+#endif
 
 //
 // EasyThreeD ET-4000+ with button input and status LED
