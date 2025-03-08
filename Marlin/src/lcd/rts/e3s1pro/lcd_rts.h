@@ -412,7 +412,7 @@ const uint16_t DGUS_VERSION = 0x000F;
 #define HOTEND_X_ZOFFSET_VP                0x163A
 #define HOTEND_Y_ZOFFSET_VP                0x164A
 
-//#define X_MIN_POS_EEPROM_VP                0x165A
+#define ADVANCE_K_TITLE_VP                 0x165A
 //#define Y_MIN_POS_EEPROM_VP                0x166A
 // prepare for hotend_fan
 //#define HOTEND_FAN_SPEED_DATA_VP         0x167A

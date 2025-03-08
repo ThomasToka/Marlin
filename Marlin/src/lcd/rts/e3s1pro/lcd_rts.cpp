@@ -713,6 +713,9 @@ void RTSSHOW::RTS_Init(void)
   RTS_ShowMotorFreeIcon(false);
   RTS_ResetHeadAndBedSetTemp();
   rtscheck.RTS_SendLoadedData(255);
+  if(lcd_rts_settings.boot_zraise){
+    queue.enqueue_now_P(PSTR("M402"));
+  }
   #if ENABLED(GCODE_PREVIEW_ENABLED)
     RTS_ResetSingleVP(DEFAULT_PRINT_MODEL_VP);
     RTS_ResetSingleVP(DOWNLOAD_PREVIEW_VP);
@@ -4364,7 +4367,6 @@ void RTSSHOW::languagedisplayUpdate(void)
   RTS_SendLang(BED_SET_TITLE_VP);
   RTS_SendLang(LEVEL_ZOFFSET_TITLE_VP);
   RTS_SendLang(FAN_CONTROL_TITLE_VP);
-  RTS_SendLang(LED_CONTROL_TITLE_VP);
   RTS_SendLang(MOVE_AXIS_ENTER_GREY_TITLE_VP);
   RTS_SendLang(CHANGE_FILAMENT_GREY_TITLE_VP);
   RTS_SendLang(PREHAET_PAGE_GREY_TITLE_VP);
@@ -4496,6 +4498,7 @@ void RTSSHOW::languagedisplayUpdate(void)
   RTS_SendLang(MESH_LEVELING_BLACK_TITLE_VP);
   RTS_SendLang(SHAPING_X_TITLE_VP);
   RTS_SendLang(SHAPING_Y_TITLE_VP);
+  RTS_SendLang(ADVANCE_K_TITLE_VP);
 }
 
 // looping at the loop function

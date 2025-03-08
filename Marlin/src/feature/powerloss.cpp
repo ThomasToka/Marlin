@@ -178,9 +178,6 @@ bool PrintJobRecovery::check() {
 void PrintJobRecovery::purge() {
   init();
   card.removeJobRecoveryFile();
-  if(lcd_rts_settings.boot_zraise){
-    queue.enqueue_now_P(PSTR("M402"));
-  }
 }
 
 /**
