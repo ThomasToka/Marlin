@@ -30,6 +30,10 @@
 
 #include "runout.h"
 
+#if ENABLED(E3S1PRO_RTS)
+  #include "../lcd/rts/e3s1pro/lcd_rts.h"
+#endif
+
 FilamentMonitor runout;
 
 bool FilamentMonitorBase::enabled = true,
@@ -67,6 +71,10 @@ bool FilamentMonitorBase::enabled = true,
 #include "pause.h"
 #include "../gcode/queue.h"
 
+#if ENABLED(E3S1PRO_RTS)
+  #include "../module/temperature.h"
+#endif
+
 #if ENABLED(HOST_ACTION_COMMANDS)
   #include "host_actions.h"
 #endif
@@ -81,6 +89,8 @@ void event_filament_runout(const uint8_t extruder) {
 
   if (did_pause_print) return;  // Action already in progress. Purge triggered repeated runout.
 
+  TERN_(E3S1PRO_RTS, if (settingsload == 1) return;);
+  
   #if ENABLED(TOOLCHANGE_MIGRATION_FEATURE)
     if (migration.in_progress) {
       DEBUG_ECHOLNPGM("Migration Already In Progress");
@@ -104,6 +114,12 @@ void event_filament_runout(const uint8_t extruder) {
   #endif
 
   const bool run_runout_script = !runout.host_handling;
+
+  #if ENABLED(E3S1PRO_RTS)
+    temphot = thermalManager.temp_hotend[0].target;
+    RTS_ShowPage(7);
+    sdcard_pause_check = true;
+  #endif
 
   #if ENABLED(HOST_ACTION_COMMANDS)
 

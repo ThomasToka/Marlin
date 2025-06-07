@@ -33,6 +33,9 @@
 #include "../gcode.h"
 #include "../../module/temperature.h"
 #include "../../lcd/marlinui.h"
+#if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+  #include "../../feature/spindle_laser.h"
+#endif
 
 /**
  * M140 - Set Bed Temperature target and return immediately
@@ -68,6 +71,9 @@
 void GcodeSuite::M140_M190(const bool isM190) {
 
   if (DEBUGGING(DRYRUN)) return;
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+    if(laser_device.is_laser_device()) return;
+  #endif
 
   bool got_temp = false;
   celsius_t temp = 0;

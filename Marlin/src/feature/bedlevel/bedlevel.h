@@ -23,6 +23,10 @@
 
 #include "../../inc/MarlinConfigPre.h"
 
+#if ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
+#endif
+
 #if ANY(RESTORE_LEVELING_AFTER_G28, ENABLE_LEVELING_AFTER_G28)
   #define CAN_SET_LEVELING_AFTER_G28 1
 #endif
@@ -78,10 +82,18 @@ class TemporaryBedLevelingState {
     /**
      * Print calibration results for plotting or manual frame adjustment.
      */
-    void print_2d_array(const uint8_t sx, const uint8_t sy, const uint8_t precision, const float *values);
+    void print_2d_array(const uint8_t sx, const uint8_t sy, const uint8_t precision, const float *values OPTARG(DYNAMIC_LEVELING, uint8_t print_x=0, uint8_t print_y=0));
 
   #endif
 
+  #if ENABLED(E3S1PRO_RTS)
+    struct ColorRange {
+        float lower_bound;
+        float upper_bound;
+        unsigned long color;
+    };
+    extern unsigned long getColor(float value, float min_value, float max_value, float median);
+  #endif
   struct mesh_index_pair {
     xy_int8_t pos;
     float distance;   // When populated, the distance from the search location

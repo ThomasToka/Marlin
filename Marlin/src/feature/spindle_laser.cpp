@@ -40,7 +40,7 @@
 
 SpindleLaser cutter;
 bool SpindleLaser::enable_state;                                      // Virtual enable state, controls enable pin if present and or apply power if > 0
-uint8_t SpindleLaser::power,                                          // Actual power output 0-255 ocr or "0 = off" > 0 = "on"
+uint8_t SpindleLaser::power = 0,                                          // Actual power output 0-255 ocr or "0 = off" > 0 = "on"
         SpindleLaser::last_power_applied; // = 0                      // Basic power state tracking
 
 #if HAS_SPINDLE_ACCELERATION
@@ -102,7 +102,11 @@ void SpindleLaser::init() {
    */
   void SpindleLaser::_set_ocr(const uint8_t ocr) {
     #if ENABLED(HAL_CAN_SET_PWM_FREQ) && SPINDLE_LASER_FREQUENCY
-      hal.set_pwm_frequency(pin_t(SPINDLE_LASER_PWM_PIN), frequency);
+      #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+        laser_device.laser_power_start(ocr);
+      #else
+        hal.set_pwm_frequency(pin_t(SPINDLE_LASER_PWM_PIN), frequency);
+      #endif
     #endif
     #if HAS_SPINDLE_ACCELERATION
       const int16_t diff = ocr - last_power_applied;
@@ -123,7 +127,7 @@ void SpindleLaser::init() {
   }
 
   void SpindleLaser::set_ocr(const uint8_t ocr) {
-    #if PIN_EXISTS(SPINDLE_LASER_ENA)
+    #if PIN_EXISTS(SPINDLE_LASER_ENA) && DISABLED(E3S1PRO_RTS_LASER)
       WRITE(SPINDLE_LASER_ENA_PIN,  SPINDLE_LASER_ACTIVE_STATE); // Cutter ON
     #endif
     _set_ocr(ocr);
@@ -131,7 +135,7 @@ void SpindleLaser::init() {
 
   void SpindleLaser::ocr_off() {
     _set_ocr(0);
-    #if PIN_EXISTS(SPINDLE_LASER_ENA)
+    #if PIN_EXISTS(SPINDLE_LASER_ENA) && DISABLED(E3S1PRO_RTS_LASER)
       WRITE(SPINDLE_LASER_ENA_PIN, !SPINDLE_LASER_ACTIVE_STATE); // Cutter OFF
     #endif
   }
@@ -167,7 +171,7 @@ void SpindleLaser::apply_power(const uint8_t opwr) {
     last_power_applied = opwr;
   }
   else {
-    #if PIN_EXISTS(SPINDLE_LASER_ENA)
+    #if PIN_EXISTS(SPINDLE_LASER_ENA) && DISABLED(E3S1PRO_RTS_LASER)
       WRITE(SPINDLE_LASER_ENA_PIN, !SPINDLE_LASER_ACTIVE_STATE);
     #endif
     isReadyForUI = false; // Only used for UI display updates.
@@ -199,6 +203,10 @@ void SpindleLaser::apply_power(const uint8_t opwr) {
   void SpindleLaser::air_assist_enable()  { WRITE(AIR_ASSIST_PIN,  AIR_ASSIST_ACTIVE); } // Turn ON
   void SpindleLaser::air_assist_disable() { WRITE(AIR_ASSIST_PIN, !AIR_ASSIST_ACTIVE); } // Turn OFF
   void SpindleLaser::air_assist_toggle()  { TOGGLE(AIR_ASSIST_PIN); } // Toggle state
+#endif
+
+#if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+  class spindle_laser_soft_pwm laser_device;
 #endif
 
 #endif // HAS_CUTTER

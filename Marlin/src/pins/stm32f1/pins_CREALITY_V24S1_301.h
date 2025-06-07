@@ -33,7 +33,7 @@
   #define E_ERROR 1
 #endif
 
-#if ALL(BLTOUCH, Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN)
+#if ALL(BLTOUCH, Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN) && DISABLED(E3S1PRO_RTS)
   #error "Disable Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN when using BLTOUCH with Creality V24S1-301."
 #endif
 
@@ -56,7 +56,7 @@
 //
 // Limit Switches
 //
-#define Z_STOP_PIN                          PA15
+#define Z_STOP_PIN                          PC14
 
 #ifndef Z_MIN_PROBE_PIN
   #define Z_MIN_PROBE_PIN                   PC14  // BLTouch IN
@@ -94,11 +94,11 @@
 #if HAS_CUTTER
   //#define HEATER_0_PIN                    -1
   //#define HEATER_BED_PIN                  -1
-  #define FAN0_PIN                          -1
+  #define FAN0_PIN                          PA0
   #define SPINDLE_LASER_PWM_PIN             PC0   // Bed FET
   #define SPINDLE_LASER_ENA_PIN             PC0   // FET 1
   #define SPINDLE_DIR_PIN                   PC0   // FET 4
-  //#define LASER_SOFT_PWM_PIN              PC0
+  #define LASER_SOFT_PWM_PIN                PC0
 #endif
 
 #include "pins_CREALITY_V4.h"

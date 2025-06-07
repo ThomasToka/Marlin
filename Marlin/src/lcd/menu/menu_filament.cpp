@@ -39,6 +39,10 @@
   #include "../../MarlinCore.h"
 #endif
 
+#if ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
+#endif
+
 //
 // Change Filament > Change/Unload/Load Filament
 //
@@ -267,6 +271,7 @@ void menu_pause_option() {
   if (!still_out)
     ACTION_ITEM(MSG_FILAMENT_CHANGE_OPTION_RESUME, []{ pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT; });
 
+  TERN_(E3S1PRO_RTS, RTS_ShowPage(8));
   END_MENU();
 }
 

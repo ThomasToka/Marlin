@@ -47,6 +47,14 @@
 
 #include "../../MarlinCore.h" // for startOrResumeJob
 
+#if ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
+  #include "../../module/planner.h"
+  #if ENABLED(E3S1PRO_RTS_LASER)
+    #include "../../feature/spindle_laser.h"
+  #endif  
+#endif
+
 /**
  * M24: Start or Resume Media Print
  *
@@ -71,6 +79,14 @@ void GcodeSuite::M24() {
     if (did_pause_print) {
       resume_print(); // will call print_job_timer.start()
       return;
+    }
+  #endif
+
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+    if(laser_device.is_laser_device())
+    {
+      laser_device.remove_card_before_is_printing = true;
+      cutter.apply_power(laser_device.power);
     }
   #endif
 
@@ -105,6 +121,8 @@ void GcodeSuite::M25() {
 
   #else
 
+    TERN_(E3S1PRO_RTS, waitway = 1);
+
     // Set initial pause flag to prevent more commands from landing in the queue while we try to pause
     if (card.isStillPrinting()) card.pauseSDPrint();
 
@@ -113,6 +131,14 @@ void GcodeSuite::M25() {
     #endif
 
     print_job_timer.pause();
+
+    #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+      if(laser_device.is_laser_device()){
+        laser_device.pause_before_position_x = current_position.x;
+        laser_device.pause_before_position_y = current_position.y;
+        laser_device.power = cutter.power;
+      }
+    #endif
 
     TERN_(DGUS_LCD_UI_MKS, MKS_pause_print_move());
 
@@ -123,6 +149,14 @@ void GcodeSuite::M25() {
       #ifdef ACTION_ON_PAUSE
         hostui.pause();
       #endif
+    #endif
+
+    #if ENABLED(E3S1PRO_RTS)
+      pause_action_flag = true;
+      Update_Time_Value = 0;
+      RTS_ShowPage(40);
+      planner.synchronize();
+      sdcard_pause_check = false;
     #endif
 
   #endif

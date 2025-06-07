@@ -32,6 +32,9 @@
 #include "../../../lcd/marlinui.h"
 #if ENABLED(SOVOL_SV06_RTS)
   #include "../../../lcd/sovol_rts/sovol_rts.h"
+#elif ENABLED(E3S1PRO_RTS)
+  #include "../../../module/temperature.h"
+  #include "../../../lcd/rts/e3s1pro/lcd_rts.h"  
 #endif
 
 #if HAS_MULTI_EXTRUDER

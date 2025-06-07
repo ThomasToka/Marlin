@@ -27,6 +27,9 @@
 #include "../gcode.h"
 #include "../../MarlinCore.h"
 #include "../../lcd/marlinui.h"
+#if ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
+#endif
 
 /**
  * M414: Set the language for the UI
@@ -41,6 +44,7 @@ void GcodeSuite::M414() {
   else
     M414_report();
 
+  TERN_(E3S1PRO_RTS, language_change_font = parser.seenval('S'));
 }
 
 void GcodeSuite::M414_report(const bool forReplay/*=true*/) {

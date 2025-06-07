@@ -39,6 +39,9 @@
 
 #if ANY(HAS_COOLER, LASER_COOLANT_FLOW_METER)
   #include "../feature/cooler.h"
+#endif
+
+#if ANY(HAS_COOLER, LASER_COOLANT_FLOW_METER) || ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
   #include "../feature/spindle_laser.h"
 #endif
 
@@ -54,6 +57,8 @@
   #include "../lcd/e3v2/creality/dwin.h"
 #elif ENABLED(SOVOL_SV06_RTS)
   #include "../lcd/sovol_rts/sovol_rts.h"
+#elif ENABLED(E3S1PRO_RTS)
+  #include "../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
 
 #if ENABLED(EXTENSIBLE_UI)
@@ -249,6 +254,9 @@
 #endif
 
 Temperature thermalManager;
+#if ENABLED(E3S1PRO_RTS)
+  raw_pid_t g_autoPID = { 0, 0, 0 };
+#endif
 
 PGMSTR(str_t_thermal_runaway, STR_T_THERMAL_RUNAWAY);
 PGMSTR(str_t_heating_failed, STR_T_HEATING_FAILED);
@@ -697,7 +705,7 @@ volatile bool Temperature::raw_temps_ready = false;
     TERN_(USE_CONTROLLER_FAN, controllerFan.update());
 
     // Run UI update
-    #if ENABLED(SOVOL_SV06_RTS)
+    #if ANY(SOVOL_SV06_RTS, E3S1PRO_RTS)
       RTS_Update();
     #else
       ui.update();
@@ -816,6 +824,15 @@ void Temperature::factory_reset() {
     bool heating = true;
 
     millis_t next_temp_ms = millis(), t1 = next_temp_ms, t2 = next_temp_ms;
+    #if ENABLED(E3S1PRO_RTS)   
+      millis_t ui_next_temp_ms = next_temp_ms;
+      RTS_ResetSingleVP(PID_TUNING_RUNNING_VP);
+      if (heater_id == 0)
+      {
+        RTS_SetOneToVP(PID_ICON_MODE_VP);
+      }
+      const bool isheater = (heater_id == H_E0);
+    #endif
     long t_high = 0, t_low = 0;
 
     raw_pid_t tune_pid = { 0, 0, 0 };
@@ -864,6 +881,17 @@ void Temperature::factory_reset() {
     TERN_(HAS_FAN_LOGIC, fan_update_ms = next_temp_ms + fan_update_interval_ms);
 
     TERN_(EXTENSIBLE_UI, ExtUI::onPIDTuning(ischamber ? ExtUI::pidresult_t::PID_CHAMBER_STARTED : isbed ? ExtUI::pidresult_t::PID_BED_STARTED : ExtUI::pidresult_t::PID_STARTED));
+
+    #if ENABLED(E3S1PRO_RTS)
+      if (isbed){
+        RTS_ResetSingleVP(PID_TEXT_OUT_CUR_CYCLE_HOTBED_VP);
+        rtscheck.RTS_SndData(ncycles, AUTO_PID_SET_HOTBED_CYCLES);  
+      }
+      if (isheater){
+        RTS_ResetSingleVP(PID_TEXT_OUT_CUR_CYCLE_NOZZLE_VP);
+        rtscheck.RTS_SndData(ncycles, AUTO_PID_SET_NOZZLE_CYCLES); 
+      }                  
+    #endif
 
     if (target > GHV(CHAMBER_MAX_TARGET, BED_MAX_TARGET, hotend_max_target(heater_id))) {
       SERIAL_ECHOPGM(STR_PID_AUTOTUNE); SERIAL_ECHOLNPGM(STR_PID_TEMP_TOO_HIGH);
@@ -950,6 +978,22 @@ void Temperature::factory_reset() {
           SHV((bias + d) >> 1);
           TERN_(HAS_STATUS_MESSAGE, ui.status_printf(0, F(S_FMT " %i/%i"), GET_TEXT_F(MSG_PID_CYCLE), cycles, ncycles));
           cycles++;
+          #if ENABLED(E3S1PRO_RTS)
+            int cycles_to_send;
+            if (cycles > ncycles) {
+              cycles_to_send = ncycles;
+            }else{
+              cycles_to_send = cycles;
+            }
+            if (isbed){
+              rtscheck.RTS_SndData(cycles_to_send, PID_TEXT_OUT_CUR_CYCLE_HOTBED_VP);
+              rtscheck.RTS_SndData(ncycles, AUTO_PID_SET_HOTBED_CYCLES);
+            }
+            if (isheater){
+              rtscheck.RTS_SndData(cycles_to_send, PID_TEXT_OUT_CUR_CYCLE_NOZZLE_VP);
+              rtscheck.RTS_SndData(ncycles, AUTO_PID_SET_NOZZLE_CYCLES);
+            }
+          #endif
           minT = target;
         }
       }
@@ -965,6 +1009,21 @@ void Temperature::factory_reset() {
         break;
       }
 
+      #if ENABLED(E3S1PRO_RTS)
+        if (ELAPSED(ms, ui_next_temp_ms)) {
+          ui_next_temp_ms = ms + 1000UL;
+          uint16_t uiTemp[1];
+          if (g_uiAutoPIDRunningDiff == 1) {
+            uiTemp[0] = thermalManager.temp_hotend[0].celsius;
+            rtscheck.RTS_SendCurveData(6, uiTemp, 1);
+            rtscheck.RTS_SndData(g_uiCurveDataCnt++, WRITE_CURVE_DDR_CMD);
+          } else if (g_uiAutoPIDRunningDiff == 2) {
+            uiTemp[0] = thermalManager.temp_bed.celsius;
+            rtscheck.RTS_SendCurveData(5, uiTemp, 1);
+            rtscheck.RTS_SndData(g_uiCurveDataCnt++, WRITE_CURVE_DDR_CMD);
+          }
+        }
+      #endif
       // Report heater states every 2 seconds
       if (ELAPSED(ms, next_temp_ms)) {
         #if HAS_TEMP_SENSOR
@@ -984,11 +1043,13 @@ void Temperature::factory_reset() {
               }
               else if (ELAPSED(ms, temp_change_ms)) {                 // Watch timer expired
                 TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillHeat_L, ID_KillHeat_D));
+                TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
                 _TEMP_ERROR(heater_id, FPSTR(str_t_heating_failed), MSG_ERR_HEATING_FAILED, current_temp);
               }
             }
             else if (current_temp < target - (MAX_OVERSHOOT_PID_AUTOTUNE)) { // Heated, then temperature fell too far?
               TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillRunaway_L, ID_KillRunaway_D));
+              TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
               _TEMP_ERROR(heater_id, FPSTR(str_t_thermal_runaway), MSG_ERR_THERMAL_RUNAWAY, current_temp);
             }
           }
@@ -1004,6 +1065,7 @@ void Temperature::factory_reset() {
         TERN_(EXTENSIBLE_UI, ExtUI::onPIDTuning(ExtUI::pidresult_t::PID_TUNING_TIMEOUT));
         TERN_(HOST_PROMPT_SUPPORT, hostui.notify(GET_TEXT_F(MSG_PID_TIMEOUT)));
         TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillHeat_L, ID_KillHeat_D));
+        TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
         SERIAL_ECHOPGM(STR_PID_AUTOTUNE); SERIAL_ECHOLNPGM(STR_PID_TIMEOUT);
         break;
       }
@@ -1011,6 +1073,12 @@ void Temperature::factory_reset() {
       if (cycles > ncycles && cycles > 2) {
         SERIAL_ECHOPGM(STR_PID_AUTOTUNE); SERIAL_ECHOLNPGM(STR_PID_AUTOTUNE_FINISHED);
         TERN_(HOST_PROMPT_SUPPORT, hostui.notify(GET_TEXT_F(MSG_PID_AUTOTUNE_DONE)));
+
+        #if ENABLED(E3S1PRO_RTS)
+          g_autoPID.p = tune_pid.p;
+          g_autoPID.i = tune_pid.i;
+          g_autoPID.d = tune_pid.d;
+        #endif
 
         #if ANY(PIDTEMPBED, PIDTEMPCHAMBER)
           FSTR_P const estring = GHV(F("chamber"), F("bed"), FPSTR(NUL_STR));
@@ -1053,6 +1121,7 @@ void Temperature::factory_reset() {
 
         goto EXIT_M303;
       }
+      TERN(E3S1PRO_RTS, RTS_Update(), ui.update());
     }
     wait_for_heatup = false;
 
@@ -1496,6 +1565,9 @@ int16_t Temperature::getHeaterPower(const heater_id_t heater_id) {
   #endif
 
   void Temperature::update_autofans() {
+    #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+      if(laser_device.is_laser_device()) return;
+    #endif
     #define _EFAN(I,N) _EFANOVERLAP(I,N) ? I :
     static const uint8_t fanBit[] PROGMEM = {
       0
@@ -1718,6 +1790,7 @@ void Temperature::_temp_error(
 void Temperature::maxtemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_TEMP, const celsius_float_t deg)) {
   #if HAS_HOTEND || HAS_HEATED_BED
     TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillBadTemp_L, ID_KillBadTemp_D));
+    TERN_(E3S1PRO_RTS, RTS_ShowPage(31));    
     TERN_(DWIN_CREALITY_LCD, dwinPopupTemperature(1));
     TERN_(EXTENSIBLE_UI, ExtUI::onMaxTempError(heater_id));
   #endif
@@ -1734,6 +1807,7 @@ void Temperature::maxtemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_T
 void Temperature::mintemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_TEMP, const celsius_float_t deg)) {
   #if HAS_HOTEND || HAS_HEATED_BED
     TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillBadTemp_L, ID_KillBadTemp_D));
+    TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
     TERN_(DWIN_CREALITY_LCD, dwinPopupTemperature(0));
     TERN_(EXTENSIBLE_UI, ExtUI::onMinTempError(heater_id));
   #endif
@@ -1966,6 +2040,7 @@ void Temperature::mintemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_T
         const auto deg = degHotend(e);
         if (deg > temp_range[e].maxtemp) {
           TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillBadTemp_L, ID_KillBadTemp_D));
+          TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
           MAXTEMP_ERROR(e, deg);
         }
       }
@@ -1989,6 +2064,7 @@ void Temperature::mintemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_T
             start_watching_hotend(e);               // If temp reached, turn off elapsed check
           else {
             TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillHeat_L, ID_KillHeat_D));
+            TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
             TERN_(DWIN_CREALITY_LCD, dwinPopupTemperature(0));
             TERN_(EXTENSIBLE_UI, ExtUI::onHeatingError(e));
             _TEMP_ERROR(e, FPSTR(str_t_heating_failed), MSG_ERR_HEATING_FAILED, temp);
@@ -2015,6 +2091,7 @@ void Temperature::mintemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_T
       const auto deg = degBed();
       if (deg > BED_MAXTEMP) {
         TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillBadTemp_L, ID_KillBadTemp_D));
+        TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
         MAXTEMP_ERROR(H_BED, deg);
       }
     }
@@ -2029,6 +2106,7 @@ void Temperature::mintemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_T
           start_watching_bed();                 // If temp reached, turn off elapsed check
         else {
           TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillHeat_L, ID_KillHeat_D));
+          TERN_(E3S1PRO_RTS, RTS_ShowPage(31));          
           TERN_(DWIN_CREALITY_LCD, dwinPopupTemperature(0));
           TERN_(EXTENSIBLE_UI, ExtUI::onHeatingError(H_BED));
           _TEMP_ERROR(H_BED, FPSTR(str_t_heating_failed), MSG_ERR_HEATING_FAILED, deg);
@@ -3530,6 +3608,7 @@ void Temperature::init() {
 
       case TRRunaway:
         TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillRunaway_L, ID_KillRunaway_D));
+        TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
         TERN_(DWIN_CREALITY_LCD, dwinPopupTemperature(0));
         TERN_(EXTENSIBLE_UI, ExtUI::onHeatingError(heater_id));
         _TEMP_ERROR(heater_id, FPSTR(str_t_thermal_runaway), MSG_ERR_THERMAL_RUNAWAY, current);
@@ -3539,6 +3618,7 @@ void Temperature::init() {
         case TRMalfunction:
           TERN_(DWIN_CREALITY_LCD, dwinPopupTemperature(0));
           TERN_(EXTENSIBLE_UI, ExtUI::onHeatingError(heater_id));
+          TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
           _TEMP_ERROR(heater_id, F(STR_T_THERMAL_MALFUNCTION), MSG_ERR_TEMP_MALFUNCTION, current);
           break;
       #endif
@@ -4870,6 +4950,8 @@ void Temperature::isr() {
           hmiFlag.heat_flag = 0;
           duration_t elapsed = print_job_timer.duration();  // Print timer
           dwin_heat_time = elapsed.value;
+        #elif ENABLED(E3S1PRO_RTS)
+          Update_Time_Value = RTS_UPDATE_VALUE;          
         #elif ENABLED(SOVOL_SV06_RTS)
           update_time_value = RTS_UPDATE_VALUE;
           if (card.isStillPrinting()) rts.refreshTime();
@@ -5010,7 +5092,12 @@ void Temperature::isr() {
       // If wait_for_heatup is set, temperature was reached, no cancel
       if (wait_for_heatup) {
         wait_for_heatup = false;
-        ui.reset_status();
+        #if ENABLED(E3S1PRO_RTS)
+          Update_Time_Value = RTS_UPDATE_VALUE;
+          RTS_ShowPage(10);
+        #else
+          ui.reset_status();
+        #endif
         return true;
       }
 

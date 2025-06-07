@@ -42,6 +42,10 @@
   #include "../lcd/sovol_rts/sovol_rts.h"
 #endif
 
+#if ENABLED(E3S1PRO_RTS)
+  #include "../lcd/rts/e3s1pro/lcd_rts.h"
+#endif
+
 #include "../module/planner.h"        // for synchronize
 #include "../module/printcounter.h"
 #include "../gcode/queue.h"
@@ -170,6 +174,7 @@ CardReader::CardReader() {
   #endif
 
   flag.sdprinting = flag.sdprintdone = flag.mounted = flag.saving = flag.logging = false;
+  TERN_(E3S1PRO_RTS, flag.reading = false);
   filesize = sdpos = 0;
 
   TERN_(HAS_MEDIA_SUBCALLS, file_subcall_ctr = 0);
@@ -700,6 +705,15 @@ void CardReader::openAndPrintFile(const char *name) {
   queue.inject(cmd);
 }
 
+#if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+  void CardReader::openAndPausePrintFile(const char *name) {
+    char cmd[4 + strlen(name) + 1 + 3 + 1]; // Room for "M23 ", filename, "\n", "M24", and null
+    sprintf_P(cmd, M23_STR, name);
+    for (char *c = &cmd[4]; *c; c++) *c = tolower(*c);
+    queue.inject(cmd);
+  }
+#endif
+
 /**
  * Start or resume a media print by setting the sdprinting flag.
  * The file browser pre-sort is also purged to free up memory,
@@ -885,6 +899,33 @@ void CardReader::openFileWrite(const char * const path) {
 
   openFailed(fname);
 }
+
+ #if ENABLED(E3S1PRO_RTS)
+  /**
+   * Open a file by DOS path for readonly (without printing for example to load a thumbnail)
+   */
+  void CardReader::openFileReadonly(const char * const path) {
+    if (!isMounted()) return;
+
+    announceOpen(2, path);
+    TERN_(HAS_MEDIA_SUBCALLS, file_subcall_ctr = 0);
+
+    MediaFile *diveDir;
+    const char * const fname = diveToFile(false, diveDir, path);
+    if (!fname) return openFailed(path);
+
+    if (myfile.open(diveDir, fname, O_READ)) {
+      filesize = myfile.fileSize();
+      sdpos = 0;
+      flag.reading = true;
+      selectFileByName(fname);
+      TERN_(EMERGENCY_PARSER, emergency_parser.disable());
+      return;
+    }
+
+    openFailed(fname);
+  }
+#endif
 
 /**
  * Check if a file exists by absolute or workDir-relative path
@@ -1099,6 +1140,9 @@ void CardReader::closefile(const bool store_location/*=false*/) {
   myfile.sync();
   myfile.close();
   flag.saving = flag.logging = false;
+  #if ENABLED(E3S1PRO_RTS)
+    flag.reading = false;
+  #endif
   sdpos = 0;
 
   TERN_(EMERGENCY_PARSER, emergency_parser.enable());

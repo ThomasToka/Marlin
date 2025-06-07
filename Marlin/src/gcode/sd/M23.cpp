@@ -27,6 +27,10 @@
 #include "../gcode.h"
 #include "../../sd/cardreader.h"
 #include "../../lcd/marlinui.h"
+#if ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
+  #include "../../feature/runout.h"
+#endif
 
 /**
  * M23: Select File
@@ -41,6 +45,14 @@
 void GcodeSuite::M23() {
   // Simplify3D includes the size, so zero out all spaces (#7227)
   for (char *fn = parser.string_arg; *fn; ++fn) if (*fn == ' ') *fn = '\0';
+  #if ENABLED(E3S1PRO_RTS)
+    #if ENABLED(FILAMENT_RUNOUT_SENSOR)
+      if(runout.enabled == true)
+      {
+        runout.filament_ran_out = false;
+      }
+    #endif
+  #endif
   card.openFileRead(parser.string_arg);
 
   TERN_(SET_PROGRESS_PERCENT, ui.set_progress(0));

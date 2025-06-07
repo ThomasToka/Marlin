@@ -46,7 +46,7 @@ inline bool G38_run_probe() {
 
   bool G38_pass_fail = false;
 
-  #if MULTIPLE_PROBING > 1
+  #if (TERN(DYNAMIC_LEVELING, lcd_rts_settings.total_probing, MULTIPLE_PROBING)) > 1
     // Get direction of move and retract
     xyz_float_t retract_mm;
     LOOP_NUM_AXES(i) {
@@ -73,7 +73,7 @@ inline bool G38_run_probe() {
 
     G38_pass_fail = true;
 
-    #if MULTIPLE_PROBING > 1
+    #if (TERN(DYNAMIC_LEVELING, lcd_rts_settings.total_probing, MULTIPLE_PROBING)) > 1
       // Move away by the retract distance
       destination = current_position + retract_mm;
       endstops.enable(false);

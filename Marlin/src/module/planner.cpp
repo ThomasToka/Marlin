@@ -117,6 +117,9 @@
 // fewer movements. The delay is measured in milliseconds, and must be less than 250ms
 #define BLOCK_DELAY_NONE         0U
 #define BLOCK_DELAY_FOR_1ST_MOVE 100U
+#if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+  #define LASER_BLOCK_DELAY_FOR_1ST_MOVE  0
+#endif
 
 Planner planner;
 
@@ -1770,7 +1773,14 @@ bool Planner::_buffer_steps(const xyze_long_t &target
     // As there are no queued movements, the Stepper ISR will not touch this
     // variable, so there is no risk setting this here (but it MUST be done
     // before the following line!!)
-    delay_before_delivering = TERN0(FT_MOTION, ftMotion.cfg.active) ? BLOCK_DELAY_NONE : BLOCK_DELAY_FOR_1ST_MOVE;
+    #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+      if(laser_device.is_laser_device()) {
+        delay_before_delivering = LASER_BLOCK_DELAY_FOR_1ST_MOVE;
+      } else
+    #endif
+    {    
+      delay_before_delivering = TERN0(FT_MOTION, ftMotion.cfg.active) ? BLOCK_DELAY_NONE : BLOCK_DELAY_FOR_1ST_MOVE;
+    }
   }
 
   // Move buffer head
@@ -2841,7 +2851,14 @@ void Planner::buffer_sync_block(const BlockFlagBit sync_flag/*=BLOCK_BIT_SYNC_PO
     // As there are no queued movements, the Stepper ISR will not touch this
     // variable, so there is no risk setting this here (but it MUST be done
     // before the following line!!)
-    delay_before_delivering = TERN0(FT_MOTION, ftMotion.cfg.active) ? BLOCK_DELAY_NONE : BLOCK_DELAY_FOR_1ST_MOVE;
+    #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+      if(laser_device.is_laser_device()){
+        delay_before_delivering = LASER_BLOCK_DELAY_FOR_1ST_MOVE;
+      }else
+    #endif
+    {    
+      delay_before_delivering = TERN0(FT_MOTION, ftMotion.cfg.active) ? BLOCK_DELAY_NONE : BLOCK_DELAY_FOR_1ST_MOVE;
+    }
   }
 
   block_buffer_head = next_buffer_head;

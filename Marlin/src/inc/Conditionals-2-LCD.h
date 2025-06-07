@@ -625,6 +625,10 @@
   #define HAS_LCDPRINT 1
 #endif
 
+#if ENABLED(E3S1PRO_RTS)
+  #define HAS_STATUS_MESSAGE 1
+#endif
+
 #if IS_ULTIPANEL && DISABLED(NO_LCD_MENUS)
   #define HAS_MARLINUI_MENU 1
 #endif

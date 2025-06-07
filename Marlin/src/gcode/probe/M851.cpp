@@ -27,6 +27,9 @@
 #include "../gcode.h"
 #include "../../feature/bedlevel/bedlevel.h"
 #include "../../module/probe.h"
+#if ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
+#endif
 
 /**
  * M851: Set the nozzle-to-probe offsets in current units
@@ -71,9 +74,14 @@ void GcodeSuite::M851() {
 
   if (parser.seenval('Z')) {
     const float z = parser.value_float();
-    if (WITHIN(z, PROBE_OFFSET_ZMIN, PROBE_OFFSET_ZMAX))
+
+    if (WITHIN(z, PROBE_OFFSET_ZMIN, PROBE_OFFSET_ZMAX)) {
+      #if ENABLED(E3S1PRO_RTS)
+        zprobe_zoffset = z;
+        RTS_SendZoffsetFeedratePercentage(true);
+      #endif
       offs.z = z;
-    else {
+    } else {
       SERIAL_ECHOLNPGM(GCODE_ERR_MSG("Z out of range (", PROBE_OFFSET_ZMIN, " to ", PROBE_OFFSET_ZMAX, ")"));
       ok = false;
     }
