@@ -36,12 +36,10 @@
 
 #if ENABLED(LASER_FEATURE)
 
-#if HAS_CUTTER
-  #include "lcd_rts_laser.h"
-  #include "../../../feature/spindle_laser.h"
-#endif
+#include "lcd_rts_laser.h"
+#include "../../../feature/spindle_laser.h"
 
-#if ENABLED(GCODE_PREVIEW_ENABLED)
+#if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)
   #include "preview.h"
 #endif
 
@@ -96,9 +94,6 @@ static void RTS_line_to_filelist_laser() {
   int num = 0;
   for (int16_t i = (file_current_page_laser - 1) * 5; i < (file_current_page_laser * 5); i++) {  
       card.selectFileByIndexSorted(i);
-      #if ENABLED(LCD_RTS_DEBUG_SDCARD)    
-          SERIAL_ECHO_MSG("card.longFilename ", card.longFilename); 
-      #endif
       char *pointFilename = card.longFilename;
       int filenamelen = strlen(card.longFilename);
 
@@ -132,20 +127,8 @@ static void RTS_line_to_filelist_laser() {
         rtscheck.RTS_SndData((unsigned long)0xFFFF, FilenameNature + (num + 1) * 16);
         rtscheck.RTS_SndData(204, FILE6_SELECT_ICON_VP + num);          
       }
-      // Debugging
-      #if ENABLED(LCD_RTS_DEBUG_SDCARD)
-        SERIAL_ECHO_MSG("Filename after truncation: ", card.longFilename);
-        SERIAL_ECHO_MSG("j value: ", j);
-      #endif
-
       strncpy(CardRecbuf.Cardshowfilename[num], card.longFilename, min(j, TEXTBYTELEN));
       CardRecbuf.Cardshowfilename[num][TEXTBYTELEN - 1] = '\0';
-
-      #if ENABLED(LCD_RTS_DEBUG_SDCARD)
-          SERIAL_ECHO("inside rts_line_to_filelist");
-          SERIAL_ECHOLN("");
-      #endif
-
       strcpy(CardRecbuf.Cardfilename[num], card.filename);
       CardRecbuf.addr[num] = FILE1_TEXT_VP + (num * 60);
       rtscheck.RTS_SndData(CardRecbuf.Cardshowfilename[num], CardRecbuf.addr[num]);
@@ -242,20 +225,10 @@ void RTSSHOW::RTS_HandleData_Laser(void)
 
         CardUpdate = true;
         CardRecbuf.recordcount = -1;
-        #if ENABLED(LCD_RTS_DEBUG_SDCARD)
-        SERIAL_ECHOPGM("Working dir is: ");
-        SERIAL_ECHO(card.getWorkDirName());
-        SERIAL_ECHOLN("");
-        #endif
         std::string currentdir;
         currentdir = card.getWorkDirName();
         if (card.getWorkDirName() != std::string("/")) {
         card.cdup();
-        #if ENABLED(LCD_RTS_DEBUG_SDCARD)
-        SERIAL_ECHO("chroot done to:");
-        SERIAL_ECHO(card.getWorkDirName());
-        SERIAL_ECHOLN("");
-        #endif
         }
 
         if (card.flag.mounted)
@@ -278,7 +251,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
         RTS_SndData(file_current_page_laser, PAGE_STATUS_TEXT_CURRENT_VP);
 
         RTS_ShowPage(52);
-        if (IS_SD_INSERTED()) RTS_line_to_filelist_laser();
+        if (card.isSDCardInserted()) RTS_line_to_filelist_laser();
         }
         CardUpdate = false;        
         EEPROM_SAVE_LANGUAGE();
@@ -1052,7 +1025,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
 
           // clean print file
           RTS_CleanPrintAndSelectFile();
-          lcd_sd_status = IS_SD_INSERTED();
+          lcd_sd_status = card.isSDCardInserted();
         }
         else {
           CardRecbuf.selectFlag = true;
@@ -1062,7 +1035,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
           RTS_SndData((unsigned long)0xFFFF, FilenameNature + recdat.data[0] * 16);      
           RTS_ShowPage(51);
           
-          #if ENABLED(GCODE_PREVIEW_ENABLED)
+          #if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)
             char ret;
             RTS_ShowPreviewImage(false);
             ret = gcodePicDataSendToDwin(CardRecbuf.Cardfilename[CardRecbuf.recordcount],VP_OVERLAY_PIC_PTINT,PIC_FORMAT_JPG, PIC_RESOLUTION_250_250);
@@ -1214,7 +1187,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       RTS_SndData(CardRecbuf.Cardshowfilename[CardRecbuf.recordcount], PRINT_FILE_TEXT_VP);
 
       // represents to update file list
-      // if (CardUpdate && lcd_sd_status && IS_SD_INSERTED())
+      // if (CardUpdate && lcd_sd_status && card.isSDCardInserted())
       if (CardUpdate && lcd_sd_status && RTS_SD_Detected())
       {
         for (uint16_t i = 0; i < CardRecbuf.Filesum; i++)
@@ -1381,7 +1354,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       }else if(recdat.data[0] == 4)// 返回
       {
         RTS_ShowPage(75);
-      }else if(recdat.data[0] == 5)// 雕刻警告界面 xy home
+      }else if(recdat.data[0] == 5)// 雕刻警告界面 xy home // site 78,79,80
       {
         waitway = 8;
         RTS_ShowPage(40);
@@ -1392,10 +1365,10 @@ void RTSSHOW::RTS_HandleData_Laser(void)
         RTS_SndData(10*10, AXIS_Y_COORD_VP);
         delay(1);
         RTS_ShowMotorFreeIcon(false);
-      }else if(recdat.data[0] == 6)// 雕刻警告界面z home
+      }else if(recdat.data[0] == 6)// 雕刻警告界面z home // site 78,79,80
       {
         queue.enqueue_now_P(PSTR("G0 Z0"));
-      }else if(recdat.data[0] == 7)// 激光 xy home
+      }else if(recdat.data[0] == 7)// 激光 xy home  // site 70,71,72
       {
         waitway = 9;
         RTS_ShowPage(40);
@@ -1406,7 +1379,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
         RTS_SndData(10*10, AXIS_Y_COORD_VP);
         delay(1);
         RTS_ShowMotorFreeIcon(false);
-      }else if(recdat.data[0] == 8)// 激光 z home
+      }else if(recdat.data[0] == 8)// 激光 z home // site 70,71,72
       {
         queue.enqueue_now_P(PSTR("G0 Z0"));
         RTS_ResetSingleVP(AXIS_Z_COORD_VP);

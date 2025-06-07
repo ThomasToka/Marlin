@@ -26,10 +26,9 @@
 #if ENABLED(HOST_PAUSE_M76)
   #include "../../feature/host_actions.h"
 #endif
-
 #if ENABLED(E3S1PRO_RTS)
   #include "../../lcd/rts/e3s1pro/lcd_rts.h"
-  #if ENABLED(GCODE_PREVIEW_ENABLED)
+  #if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)
     #include "../../lcd/rts/e3s1pro/preview.h"
   #endif
   #include "../../module/temperature.h"

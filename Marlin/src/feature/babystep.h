@@ -59,7 +59,7 @@ public:
     }
   #endif
 
-  #if ALL(E3S1PRO_RTS, HAS_CUTTER)
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
     void add_mm_laser(const AxisEnum axis, const_float_t mm);
     void add_steps_laser(const AxisEnum axis, const int16_t distance);
   #endif

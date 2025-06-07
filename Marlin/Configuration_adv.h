@@ -1504,7 +1504,6 @@
 // Change values more rapidly when the encoder is rotated faster
 #define ENCODER_RATE_MULTIPLIER
 #if ENABLED(ENCODER_RATE_MULTIPLIER)
-  #define ENCODER_5X_STEPS_PER_SEC    30  // Creality Ender3v2 Config
   #define ENCODER_10X_STEPS_PER_SEC   30  // (steps/s) Encoder rate for 10x speed
   #define ENCODER_100X_STEPS_PER_SEC  80  // (steps/s) Encoder rate for 100x speed
 #endif
@@ -2379,7 +2378,7 @@
   //#define LA_DEBUG              // Print debug information to serial during operation. Disable for production use.
   //#define EXPERIMENTAL_I2S_LA   // Allow I2S_STEPPER_STREAM to be used with LA. Performance degrades as the LA step rate reaches ~20kHz.
 
-  //#define SMOOTH_LIN_ADVANCE    // Remove limits on acceleration by gradual increase of nozzle pressure
+  #define SMOOTH_LIN_ADVANCE    // Remove limits on acceleration by gradual increase of nozzle pressure
   #if ENABLED(SMOOTH_LIN_ADVANCE)
     /**
      * ADVANCE_TAU is also the time ahead that the smoother needs to look
@@ -2691,13 +2690,15 @@
 #define MAX_CMD_SIZE 96
 #define BUFSIZE 8
 
-// Transmission to Host Buffer Size
-// To save 386 bytes of flash (and TX_BUFFER_SIZE+3 bytes of RAM) set to 0.
-// To buffer a simple "ok" you need 4 bytes.
-// For ADVANCED_OK (M105) you need 32 bytes.
-// For debug-echo: 128 bytes for the optimal speed.
-// Other output doesn't need to be that speedy.
-// :[0, 2, 4, 8, 16, 32, 64, 128, 256]
+/**
+ * Host Transmit Buffer Size
+ *  - Costs 386 bytes of flash and TX_BUFFER_SIZE+3 bytes of SRAM (if not 0).
+ *  - 4 bytes required to buffer a simple "ok".
+ *  - 32 bytes for ADVANCED_OK (M105).
+ *  - 128 bytes for the optimal speed of 'debug-echo:'
+ *  - Other output doesn't need to be that speedy.
+ * :[0, 2, 4, 8, 16, 32, 64, 128, 256]
+ */
 #define TX_BUFFER_SIZE 128
 
 /**
@@ -3672,31 +3673,10 @@
 //#define LASER_FEATURE
 #if ANY(SPINDLE_FEATURE, LASER_FEATURE)
 
-//#define EEPROM_PLR
-#if ENABLED(EEPROM_PLR)
-  #define PLR_ADDR 800
-#endif
-
-//#define EEPROM_DEMARCATE
-#if ENABLED(EEPROM_DEMARCATE)
-  #define DEMARCATE_ADDR 1900
-  #define DEMARCATE_NUMBER 4
-  #define Tem_standard_10   10
-  #define Tem_standard_25   25
-  #define Tem_standard_35   35
-  #define Tem_standard_40   40
-  #define Tem_standard_50   50
-  #define Tem_compens_value_10   0 //10
-  #define Tem_compens_value_25   20//25
-  #define Tem_compens_value_35   30//35
-  #define Tem_compens_value_40   45//40
-  #define Tem_compens_value_50   60//50
-#endif
-
   #define LASER_FDM_ADDR             1950
   #define LASER_Z_AXIS_HIGH_ADDR    1952
   #define LASER_Z_AXIS_HIGH_MAX  170
-  #if ENABLED(ENDER_3S1_PRO) || ENABLED(ENDER_3S1)
+  #if ENABLED(ENDER_3S1_PRO)
     #define EVENT_GCODE_SD_ABORT_LASER      "G28 XY F3000\nG1 X0 Y10 F3000\nM84"
     #define HOME_LASER                      "G28 XY F3000\nG1 X0 Y10 F3000"
   #elif ENABLED(ENDER_3S1_PLUS)
@@ -3733,7 +3713,6 @@
     #define SPINDLE_SERVO_MIN 10               // Minimum angle for servo spindle
   #endif
 
-  #define SPINDLE_LASER_USE_PWM //107011
   #define LASER_Z_AXIS_HIGH_MAX  170
 
   /**
@@ -3777,6 +3756,8 @@
       #define SPEED_POWER_MIN          5000    // (RPM)
       #define SPEED_POWER_MAX         30000    // (RPM) SuperPID router controller 0 - 30,000 RPM
       #define SPEED_POWER_STARTUP       255    // (RPM) M3/M4 speed/power default (with no arguments)
+
+      //#define DEFAULT_ACCELERATION_SPINDLE   1000 // (°/s/s) Default spindle acceleration (speed change with time)
     #endif
 
   #else
@@ -4014,8 +3995,10 @@
 
 // @section reporting
 
-// Extra options for the M114 "Current Position" report
-#define M114_DETAIL         // Use 'M114` for details to check planner calculations
+/**
+ * Extra options for the M114 "Current Position" report
+ */
+#define M114_DETAIL         // Use 'M114 D' for details to check planner calculations
 //#define M114_REALTIME       // Real current position based on forward kinematics
 //#define M114_LEGACY         // M114 used to synchronize on every call. Enable if needed.
 

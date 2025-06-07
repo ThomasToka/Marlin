@@ -148,12 +148,6 @@ enum ADCSensorState : char {
 //
 
 typedef struct { float p, i, d; } raw_pid_t;
-
-#if ENABLED(E3S1PRO_RTS)
-  typedef struct { float p, i, d, c; } raw_pidc_t;
-  typedef struct { float p, i, d, f; } raw_pidf_t;
-#endif
-
 typedef struct { float p, i, d, c, f; } raw_pidcf_t;
 
 #if HAS_PID_HEATING
@@ -1437,5 +1431,4 @@ class Temperature {
 };
 
 TERN_(E3S1PRO_RTS, extern raw_pid_t g_autoPID);
-
 extern Temperature thermalManager;

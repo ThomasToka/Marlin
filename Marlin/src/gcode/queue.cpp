@@ -39,9 +39,12 @@ GCodeQueue queue;
 
 #if ENABLED(E3S1PRO_RTS)
   #include "../lcd/rts/e3s1pro/lcd_rts.h"
-  #if ENABLED(GCODE_PREVIEW_ENABLED)
+  #if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)
     #include "../lcd/rts/e3s1pro/preview.h"  
   #endif
+  #if ENABLED(E3S1PRO_RTS_LASER)
+    #include "../feature/spindle_laser.h"
+  #endif  
 #endif
 
 #if ENABLED(BINARY_FILE_TRANSFER)
@@ -54,10 +57,6 @@ GCodeQueue queue;
 
 #if ENABLED(GCODE_REPEAT_MARKERS)
   #include "../feature/repeat.h"
-#endif
-
-#if ALL(E3S1PRO_RTS, HAS_CUTTER)
-  #include "../feature/spindle_laser.h"
 #endif
 
 // Frequently used G-code strings
@@ -146,20 +145,20 @@ bool GCodeQueue::enqueue_one(const char * const cmd) {
 }
 
 #if ENABLED(E3S1PRO_RTS)
-/**
- * Attempt to enqueue a single G-code command
- * and return 'true' if successful.
- */
-bool GCodeQueue::enqueue_one_P(PGM_P const pgcode) {
-  size_t i = 0;
-  PGM_P p = pgcode;
-  char c;
-  while ((c = pgm_read_byte(&p[i])) && c != '\n') i++;
-  char cmd[i + 1];
-  memcpy_P(cmd, p, i);
-  cmd[i] = '\0';
-  return ring_buffer.enqueue(cmd);
-}
+  /**
+   * Attempt to enqueue a single G-code command
+   * and return 'true' if successful.
+   */
+  bool GCodeQueue::enqueue_one_P(PGM_P const pgcode) {
+    size_t i = 0;
+    PGM_P p = pgcode;
+    char c;
+    while ((c = pgm_read_byte(&p[i])) && c != '\n') i++;
+    char cmd[i + 1];
+    memcpy_P(cmd, p, i);
+    cmd[i] = '\0';
+    return ring_buffer.enqueue(cmd);
+  }
 #endif
 
 /**
@@ -359,16 +358,14 @@ FORCE_INLINE bool is_M29(const char * const cmd) {  // matches "M29" & "M29 ", b
   return m29 && !NUMERIC(m29[3]);
 }
 
-#if ALL(E3S1PRO_RTS, HAS_CUTTER)
-
-void get_gcode_comment()
-{
-   char* p;
-   unsigned char i, inc=0, buf[30]={0};
-  while(1){
+#if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+  void get_gcode_comment()
+  {
+    char* p;
+    unsigned char i, inc=0, buf[30]={0};
+    while(1){
       const int16_t n = card.get();
       const bool card_eof = card.eof();
-
       if( (card_eof) || (n=='\n'))
       {
         for(i=LASER_MIN_X; i<=LASER_MAX_Y; i++){
@@ -376,27 +373,22 @@ void get_gcode_comment()
           if(p) {
             p+=5;
             while(*p==' ') p++;
-            laser_device.set_laser_range((laser_device_range)i, atof(p));// = atof(p+5);
+            laser_device.set_laser_range((laser_device_range)i, atof(p));
             break;
-            //SERIAL_ECHOLNPAIR(laser_device.laser_cmp_info[i], laser_device.get_laser_range((laser_device_range)i));
           }else if((p = strstr((char*)&buf[0], "estimated_time")) != NULL) {
             p += strlen("estimated_time(s):");
             while(*p==' ') p++;
             laser_device.remain_time = atof(p)+59;
-            //SERIAL_ECHOLNPAIR("laser_device.remain_time=", laser_device.remain_time);
             break;
           }
         }
-		//SERIAL_ECHO_MSG(buf); //107011
         return;
       }
-
       buf[inc] = n;
-	  if(inc<29) inc++;
-
+      if(inc<29) inc++;
+    }
   }
-}
-#endif // #if HAS_CUTTER
+#endif
 
 #define PS_NORMAL 0
 #define PS_EOL    1
@@ -682,12 +674,10 @@ void GCodeQueue::get_serial_commands() {
         process_stream_char(sd_char, sd_input_state, command.buffer, sd_count);
       }        
       #if ENABLED(E3S1PRO_RTS)
-        // the printing results
         if (card_eof)
         {
           delay(1);
-
-          #if HAS_CUTTER
+          #if ENABLED(E3S1PRO_RTS_LASER)
             if(laser_device.is_laser_device()){ 
               // rtscheck.RTS_SndData(ExchangePageBase + 60, ExchangepageAddr);
               //  change_page_font = 60;
@@ -710,12 +700,11 @@ void GCodeQueue::get_serial_commands() {
 
 #endif // HAS_MEDIA
 
-#if HAS_MEDIA && ALL(E3S1PRO_RTS, LASER_FEATURE)
-
+#if HAS_MEDIA && ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
   void get_sdcard_laser_range() 
   {
     // Get commands if there are more in the file
-    if( !((laser_device.is_read_gcode_range_on()) && (laser_device.is_laser_device()) && (IS_SD_PAUSED()))) return;
+    if( !((laser_device.is_read_gcode_range_on()) && (laser_device.is_laser_device()) && (card.isPaused()))) return;
 
     while (!card.eof()) 
     {
@@ -736,8 +725,7 @@ void GCodeQueue::get_serial_commands() {
 
     }
   }
-  
-#endif // HAS_MEDIA && ALL(E3S1PRO_RTS, LASER_FEATURE)
+#endif // HAS_MEDIA && ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
 
 /**
  * Add to the circular command queue the next command from:
@@ -750,8 +738,8 @@ void GCodeQueue::get_available_commands() {
 
   get_serial_commands();
 
-  #if HAS_CUTTER
-    if(laser_device.is_laser_device()&&laser_device.is_read_gcode_range_on()&&IS_SD_PAUSED()){ // 解决FDM有时不打印的bug 107011 -20211110
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+    if(laser_device.is_laser_device() && laser_device.is_read_gcode_range_on() && card.isPaused()){
       get_sdcard_laser_range();
     }else 
   #endif

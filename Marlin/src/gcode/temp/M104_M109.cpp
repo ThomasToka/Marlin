@@ -37,9 +37,11 @@
 #include "../../lcd/marlinui.h"
 
 #include "../../MarlinCore.h" // for startOrResumeJob, etc.
-
 #if ENABLED(E3S1PRO_RTS)
   #include "../../lcd/rts/e3s1pro/lcd_rts.h"
+  #if ENABLED(E3S1PRO_RTS_LASER)
+    #include "../../feature/spindle_laser.h"
+  #endif  
 #endif
 
 #if ENABLED(PRINTJOB_TIMER_AUTOSTART)
@@ -47,10 +49,6 @@
   #if ENABLED(CANCEL_OBJECTS)
     #include "../../feature/cancel_object.h"
   #endif
-#endif
-
-#if ALL(E3S1PRO_RTS, HAS_CUTTER)
-  #include "../../feature/spindle_laser.h"
 #endif
 
 /**
@@ -80,8 +78,7 @@
 void GcodeSuite::M104_M109(const bool isM109) {
 
   if (DEBUGGING(DRYRUN)) return;
-
-  #if ALL(E3S1PRO_RTS, HAS_CUTTER)
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
     if(laser_device.is_laser_device()) return;
   #endif
 
@@ -118,10 +115,8 @@ void GcodeSuite::M104_M109(const bool isM109) {
       if (target_extruder != active_extruder) return;
     #endif
     thermalManager.setTargetHotend(temp, target_extruder);
-    
-    // to be fixed
-    TERN_(E3S1PRO_RTS, temphot = temp);      
-    
+    TERN_(E3S1PRO_RTS, temphot = temp);
+
     #if ENABLED(DUAL_X_CARRIAGE)
       if (idex_is_duplicating() && target_extruder == 0)
         thermalManager.setTargetHotend(temp ? temp + duplicate_extruder_temp_offset : 0, 1);

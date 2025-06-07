@@ -65,11 +65,11 @@
 //#define CUSTOM_VERSION_FILE Version.h // Path from the root directory (no quotes)
 
 // @section machine
-
-//#define ENDER_3S1_PRO
-//#define ENDER_3S1_PLUS
-//#define ENDER_3S1
-#define FORK_VERSION "v033"
+#if ENABLED(E3S1PRO_RTS)
+  #define FORK_VERSION "v034"
+  #define LCD_SERIAL_PORT 2
+  #define LCD_BAUDRATE 115200
+#endif
 
 // Choose the name from boards.h that matches your setup
 #define USER_STM32F401 1
@@ -81,44 +81,19 @@
 //#if defined(USER_STM32F103RE) || defined(USER_STM32F103RC)
 //  #define MOTHERBOARD BOARD_CREALITY_V24S1_301
 //#endif
-//#define WATCHDOG_DURATION_8S
-//
-// Ender-3S1Pro touch display. Uses lcd_rts.cpp.
-//
-//#define SDCARD_EEPROM_EMULATION
 
-#if ENABLED(ENDER_3S1_PRO)
-  #define E3S1PRO_RTS
-  #define LCD_SERIAL_PORT 2
-  #define LCD_BAUDRATE 115200  
-#elif ENABLED(ENDER_3S1_PLUS)
-  #define E3S1PRO_RTS
-  #define LCD_SERIAL_PORT 2
-  #define LCD_BAUDRATE 115200   
-#elif ENABLED(ENDER_3S1)
-  #define DWIN_CREALITY_LCD
-  #define LCD_SERIAL_PORT 2
-  #define LCD_BAUDRATE 115200
-#elif ENABLED(ENDER_3)
-  #define CR10_STOCKDISPLAY
-  #if ENABLED(CR10_STOCKDISPLAY)
-  #define RET6_12864_LCD  // Specific to the SoC (can either be RET / VET)
-  #endif
-#endif
-
+//
+// Ender-3S1Pro/Plus touch display. Uses lcd_rts.cpp.
+//
 #if ENABLED(ENDER_3S1_PRO)
   //#define CUSTOM_VERSION_FILE Version.h // Path from the root directory (no quotes)
   #define CUSTOM_MACHINE_NAME "Ender-3 S1 Pro"  
-  #define MACVERSION        STRING_CONFIG_H_AUTHOR
-  #define SOFTVERSION       SHORT_BUILD_VERSION
   #define MACHINE_TYPE      "Ender-3 S1 Pro"
   #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
     #define FIRMWARE_VERSION  "abl-" FORK_VERSION "-byTT"
   #else
     #define FIRMWARE_VERSION  "ubl-" FORK_VERSION "-byTT"
   #endif
-  #define SCREEN_VERSION    "UI20"
-  #define SCREEN_HW_VERSION "DWIN2021"
   #if ENABLED(USER_STM32F103RE)
   #define HARDWARE_VERSION  "CR-E3S1PRO-F1-RE"
   #elif ENABLED(USER_STM32F103RC)
@@ -134,16 +109,12 @@
 #if ENABLED(ENDER_3S1_PLUS)
   //#define CUSTOM_VERSION_FILE Version.h // Path from the root directory (no quotes)
   #define CUSTOM_MACHINE_NAME "Ender-3 S1 Plus"  
-  #define MACVERSION        STRING_CONFIG_H_AUTHOR
-  #define SOFTVERSION       SHORT_BUILD_VERSION
   #define MACHINE_TYPE      "Ender-3 S1 Plus"
   #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
     #define FIRMWARE_VERSION  "abl-" FORK_VERSION "-byTT"
   #else
     #define FIRMWARE_VERSION  "ubl-" FORK_VERSION "-byTT"
   #endif
-  #define SCREEN_VERSION    "v1.0.1-byTT"
-  #define SCREEN_HW_VERSION "DWIN2021"
   #if ENABLED(USER_STM32F103RE)
   #define HARDWARE_VERSION  "CR-E3S1PLUS-F1-RE"
   #elif ENABLED(USER_STM32F103RC)
@@ -156,82 +127,11 @@
   #define CORP_WEBSITE_E    "www.marlinfw.org"
 #endif
 
-#if ENABLED(ENDER_3S1)
-  //#define CUSTOM_VERSION_FILE Version.h // Path from the root directory (no quotes)
-  #define CUSTOM_MACHINE_NAME "Ender-3 S1"  
-  #define MACVERSION        STRING_CONFIG_H_AUTHOR
-  #define SOFTVERSION       SHORT_BUILD_VERSION
-  #define MACHINE_TYPE      "Ender-3 S1"
-  #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
-    #define FIRMWARE_VERSION  "abl5x5-" FORK_VERSION "-byTT"
-  #else
-    #if GRID_MAX_POINTS_X == 5
-      #define FIRMWARE_VERSION  "ubl5x5-" FORK_VERSION "-byTT"
-    #elif GRID_MAX_POINTS_X == 7
-      #define FIRMWARE_VERSION  "ubl7x7-" FORK_VERSION "-byTT"
-    #elif GRID_MAX_POINTS_X == 8
-      #define FIRMWARE_VERSION  "ubl8x8-" FORK_VERSION "-byTT"      
-    #elif GRID_MAX_POINTS_X == 9
-      #define FIRMWARE_VERSION  "ubl9x9-" FORK_VERSION "-byTT"      
-    #elif GRID_MAX_POINTS_X == 10
-      #define FIRMWARE_VERSION  "ubl10x10-" FORK_VERSION "-byTT"
-    #endif
-  #endif
-  #define SCREEN_VERSION    "v1.0.1-byTT" 
-  #define SCREEN_HW_VERSION "DWIN2021"
-  #if ENABLED(USER_STM32F103RE) 
-  #define HARDWARE_VERSION  "CR-E3S1-F1-RE"
-  #elif ENABLED(USER_STM32F103RC)
-  #define HARDWARE_VERSION  "CR-E3S1-F1-RC"  
-  #elif ENABLED(USER_STM32F401)
-  #define HARDWARE_VERSION  "CR-E3S1-F4"
-  #endif
-  #define PRINT_SIZE        "235 * 235 * 270"
-  #define CORP_WEBSITE_C    "www.cxsw3d.com  "
-  #define CORP_WEBSITE_E    "www.marlinfw.org"
-#endif
-#if ENABLED(ENDER_3)
-  // Author info of this build printed to the host during boot and M115
-  #define CUSTOM_MACHINE_NAME "Ender-3"    
-  #define STRING_CONFIG_H_AUTHOR "build by TT" // Who made the changes.
-  //#define CUSTOM_VERSION_FILE Version.h // Path from the root directory (no quotes)
-  #define MACVERSION        STRING_CONFIG_H_AUTHOR
-  #define SOFTVERSION       SHORT_BUILD_VERSION
-  #define MACHINE_TYPE      "Ender-3"
-  #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
-    #define FIRMWARE_VERSION  "abl5x5-byTT"
-  #else
-    #if GRID_MAX_POINTS_X == 5
-      #define FIRMWARE_VERSION  "ubl5x5-" FORK_VERSION "-byTT"
-    #elif GRID_MAX_POINTS_X == 7
-      #define FIRMWARE_VERSION  "ubl7x7-" FORK_VERSION "-byTT"
-    #elif GRID_MAX_POINTS_X == 8
-      #define FIRMWARE_VERSION  "ubl8x8-" FORK_VERSION "-byTT"      
-    #elif GRID_MAX_POINTS_X == 9
-      #define FIRMWARE_VERSION  "ubl9x9-" FORK_VERSION "-byTT"      
-    #elif GRID_MAX_POINTS_X == 10
-      #define FIRMWARE_VERSION  "ubl10x10-" FORK_VERSION "-byTT"
-    #endif
-  #endif
-  #define SCREEN_VERSION    "v1.0.1-byTT" 
-  #define SCREEN_HW_VERSION "DWIN2021"
-  #define HARDWARE_VERSION  "CR-FDM-beta"
-  #define PRINT_SIZE        "235 * 235 * 250"
-  #define CORP_WEBSITE_C    "www.cxsw3d.com  "
-  #define CORP_WEBSITE_E    "www.marlinfw.org"
-#endif
-
 /**
  * Release version. Leave the Marlin version or apply a custom scheme.
  */
 #ifndef SHORT_BUILD_VERSION
-  #if ENABLED(Z_AXIS_LIMIT_MODE)
-    #define SHORT_BUILD_VERSION FIRMWARE_VERSION
-  #elif ENABLED(USER_STM32F103RE)
-    #define SHORT_BUILD_VERSION FIRMWARE_VERSION
-  #elif ENABLED(USER_STM32F103RC)
-    #define SHORT_BUILD_VERSION FIRMWARE_VERSION
-  #elif ENABLED(USER_STM32F401)
+  #if ANY(USER_STM32F401, USER_STM32F103RE, USER_STM32F103RC)
     #define SHORT_BUILD_VERSION FIRMWARE_VERSION
   #endif  
 #endif
@@ -268,9 +168,8 @@
  * Currently Ethernet (-2) is only supported on Teensy 4.1 boards.
  * :[-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
  */
-
-//#define SERIAL_PORT_2 2
-//#define BAUDRATE_2 115200   // :[2400, 9600, 19200, 38400, 57600, 115200, 250000, 500000, 1000000] Enable to override BAUDRATE
+//#define SERIAL_PORT_2 -1
+//#define BAUDRATE_2 250000   // :[2400, 9600, 19200, 38400, 57600, 115200, 250000, 500000, 1000000] Enable to override BAUDRATE
 
 /**
  * Select a third serial port on the board to use for communication with the host.
@@ -318,15 +217,9 @@
  *          TMC5130, TMC5130_STANDALONE, TMC5160, TMC5160_STANDALONE
  * :['A4988', 'A5984', 'DRV8825', 'LV8729', 'TB6560', 'TB6600', 'TMC2100', 'TMC2130', 'TMC2130_STANDALONE', 'TMC2160', 'TMC2160_STANDALONE', 'TMC2208', 'TMC2208_STANDALONE', 'TMC2209', 'TMC2209_STANDALONE', 'TMC2240', 'TMC2660', 'TMC2660_STANDALONE', 'TMC5130', 'TMC5130_STANDALONE', 'TMC5160', 'TMC5160_STANDALONE']
  */
-#if ENABLED(ENDER_3)
-#define X_DRIVER_TYPE  A4988
-#define Y_DRIVER_TYPE  A4988
-#define Z_DRIVER_TYPE  A4988
-#else
 #define X_DRIVER_TYPE  TMC2208_STANDALONE
 #define Y_DRIVER_TYPE  TMC2208_STANDALONE
 #define Z_DRIVER_TYPE  TMC2208_STANDALONE
-#endif
 //#define X2_DRIVER_TYPE A4988
 //#define Y2_DRIVER_TYPE A4988
 //#define Z2_DRIVER_TYPE A4988
@@ -338,11 +231,7 @@
 //#define U_DRIVER_TYPE  A4988
 //#define V_DRIVER_TYPE  A4988
 //#define W_DRIVER_TYPE  A4988
-#if ENABLED(ENDER_3)
-#define E0_DRIVER_TYPE A4988
-#else
 #define E0_DRIVER_TYPE TMC2208_STANDALONE
-#endif
 //#define E1_DRIVER_TYPE A4988
 //#define E2_DRIVER_TYPE A4988
 //#define E3_DRIVER_TYPE A4988
@@ -832,18 +721,6 @@
 // Above this temperature the heater will be switched off.
 // This can protect components from overheating, but NOT from shorts and failures.
 // (Use MINTEMP for thermistor short/failure protection.)
-#if  ENABLED(ENDER_3)
-#define HEATER_0_MAXTEMP 265
-#define HEATER_1_MAXTEMP 265
-#define HEATER_2_MAXTEMP 265
-#define HEATER_3_MAXTEMP 265
-#define HEATER_4_MAXTEMP 265
-#define HEATER_5_MAXTEMP 265
-#define HEATER_6_MAXTEMP 265
-#define HEATER_7_MAXTEMP 265
-#define BED_MAXTEMP      110
-#define CHAMBER_MAXTEMP  60
-#else
 #define HEATER_0_MAXTEMP 320
 #define HEATER_1_MAXTEMP 275
 #define HEATER_2_MAXTEMP 275
@@ -854,7 +731,6 @@
 #define HEATER_7_MAXTEMP 275
 #define BED_MAXTEMP      160
 #define CHAMBER_MAXTEMP  60
-#endif
 
 /**
  * Thermal Overshoot
@@ -1489,11 +1365,7 @@
  * Override with M92 (when enabled below)
  *                                      X, Y, Z [, I [, J [, K...]]], E0 [, E1[, E2...]]
  */
-#if ENABLED(ENDER_3)
-#define DEFAULT_AXIS_STEPS_PER_UNIT   { 80, 80, 400, 93}
-#else
 #define DEFAULT_AXIS_STEPS_PER_UNIT   { 80.0, 80.0, 400, 424.9}
-#endif
 
 /**
  * Enable support for M92. Disable to save at least ~530 bytes of flash.
@@ -1603,9 +1475,7 @@
  * The probe replaces the Z-MIN endstop and is used for Z homing.
  * (Automatically enables USE_PROBE_FOR_Z_HOMING.)
  */
-#if DISABLED(ENDER_3S1)
-  #define Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN
-#endif
+#define Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN
 // Force the use of the probe for Z-axis homing
 #define USE_PROBE_FOR_Z_HOMING
 
@@ -1853,18 +1723,7 @@
  *     |    [-]    |
  *     O-- FRONT --+
  */
-#if ENABLED(ENDER_3)
-#define NOZZLE_TO_PROBE_OFFSET_X -42
-#define NOZZLE_TO_PROBE_OFFSET_Y -12
-#else
-#define NOZZLE_TO_PROBE_OFFSET_X -31.5
-#define NOZZLE_TO_PROBE_OFFSET_Y -41.8
-#endif
-#if ANY(ENDER_3S1_PLUS, ENDER_3S1_PRO, ENDER_3S1) && ENABLED(PERSONAL_BUILD)
-#define NOZZLE_TO_PROBE_OFFSET { NOZZLE_TO_PROBE_OFFSET_X, NOZZLE_TO_PROBE_OFFSET_Y, -1.90 }
-#else
-#define NOZZLE_TO_PROBE_OFFSET { NOZZLE_TO_PROBE_OFFSET_X, NOZZLE_TO_PROBE_OFFSET_Y, 0 }
-#endif
+#define NOZZLE_TO_PROBE_OFFSET { -31.5, -41.8, 0 }
 
 // Enable and set to use a specific tool for probing. Disable to allow any tool.
 #define PROBING_TOOL 0
@@ -1874,17 +1733,19 @@
 
 // Most probes should stay away from the edges of the bed, but
 // with NOZZLE_AS_PROBE this can be negative for a wider probing area.
-//#define PROBING_MARGIN 45
+//#define PROBING_MARGIN 10
 
 // X and Y axis travel speed between probes.
 // Leave undefined to use the average of the current XY homing feedrate.
-#if ENABLED(ENDER_3S1_PLUS)
+#if ENABLED(ENDER_3S1_PRO)
+  #define XY_PROBE_FEEDRATE (300*60)  // (mm/min)
+#elif ENABLED(ENDER_3S1_PLUS)
   #define XY_PROBE_FEEDRATE (200*60)  // (mm/min)
 #else
-  #define XY_PROBE_FEEDRATE (300*60)  // (mm/min)
+  #define XY_PROBE_FEEDRATE (133*60)  // (mm/min)
 #endif
 
-// Feedrate (mm/min) for the first approach when double-probing (MULTIPLE_PROBING == 2)
+// Feedrate for the first approach when double-probing (MULTIPLE_PROBING == 2)
 #define Z_PROBE_FEEDRATE_FAST (16*60) // (mm/min)
 
 // Feedrate for the "accurate" probe of each point
@@ -1936,8 +1797,8 @@
  * A total of 2 does fast/slow probes with a weighted average.
  * A total of 3 or more adds more slow probes, taking the average.
  */
-#define MULTIPLE_PROBING 2
-#define EXTRA_PROBING    1
+//#define MULTIPLE_PROBING 2
+//#define EXTRA_PROBING    1
 
 /**
  * Z probes require clearance when deploying, stowing, and moving between
@@ -1959,7 +1820,7 @@
 #define Z_PROBE_ERROR_TOLERANCE     3 // (mm) Tolerance for early trigger (<= -probe.offset.z + ZPET)
 #define Z_AFTER_PROBING             5 // (mm) Z position after probing is done
 
-#define Z_PROBE_LOW_POINT          -5 // Farthest distance below the trigger-point to go before stopping
+#define Z_PROBE_LOW_POINT          -5 // (mm) Farthest distance below the trigger-point to go before stopping
 
 // For M851 provide ranges for adjusting the X, Y, and Z probe offsets
 //#define PROBE_OFFSET_XMIN -50   // (mm)
@@ -2075,9 +1936,9 @@
 //#define Z_IDLE_HEIGHT Z_HOME_POS
 
 #define Z_CLEARANCE_FOR_HOMING  5 // (mm) Minimal Z height before homing (G28) for Z clearance above the bed, clamps, ...
-                                    // Be sure to have this much clearance over your Z_MAX_POS to prevent grinding.
+                                    // You'll need this much clearance above Z_MAX_POS to avoid grinding.
 
-#define Z_AFTER_HOMING          5 // (mm) Height to move to after homing Z
+#define Z_AFTER_HOMING          5 // (mm) Height to move to after homing (if Z was homed)
 //#define XY_AFTER_HOMING { 10, 10 }  // (mm) Move to an XY position after homing (and raising Z)
 
 //#define EVENT_GCODE_AFTER_HOMING "M300 P440 S200"  // Commands to run after G28 (and move to XY_AFTER_HOMING)
@@ -2140,32 +2001,6 @@
   #define Z_MAX_POS 300
 #endif
 
-#if ENABLED(ENDER_3S1)
-  // The size of the printable area
-  #define X_BED_SIZE 235
-  #define Y_BED_SIZE 235
-
-  // Travel limits (mm) after homing, corresponding to endstop positions.
-  #define X_MIN_POS -4
-  #define Y_MIN_POS -3
-  #define Z_MIN_POS 0
-  #define X_MAX_POS X_BED_SIZE
-  #define Y_MAX_POS Y_BED_SIZE
-  #define Z_MAX_POS 270
-#endif
-#if ENABLED(ENDER_3)
-  // The size of the printable area
-  #define X_BED_SIZE 235
-  #define Y_BED_SIZE 235
-
-  // Travel limits (mm) after homing, corresponding to endstop positions.
-  #define X_MIN_POS 0
-  #define Y_MIN_POS 0
-  #define Z_MIN_POS 0
-  #define X_MAX_POS X_BED_SIZE
-  #define Y_MAX_POS Y_BED_SIZE
-  #define Z_MAX_POS 250
-#endif
 //#define I_MIN_POS 0
 //#define I_MAX_POS 50
 //#define J_MIN_POS 0
@@ -2237,11 +2072,7 @@
  */
 #define FILAMENT_RUNOUT_SENSOR
 #if ENABLED(FILAMENT_RUNOUT_SENSOR)
-  #if ENABLED(ENDER_3S1_PLUS) || ENABLED(ENDER_3S1_PRO) || ENABLED(ENDER_3S1)
-    #define FIL_RUNOUT_ENABLED_DEFAULT true // Enable the sensor on startup. Override with M412 followed by M500.
-  #else
-    #define FIL_RUNOUT_ENABLED_DEFAULT false // Enable the sensor on startup. Override with M412 followed by M500.
-  #endif
+  #define FIL_RUNOUT_ENABLED_DEFAULT true // Enable the sensor on startup. Override with M412 followed by M500.
   #define NUM_RUNOUT_SENSORS   1          // Number of sensors, up to one per extruder. Define a FIL_RUNOUT#_PIN for each.
 
   #define FIL_RUNOUT_STATE     HIGH        // Pin state indicating that filament is NOT present.
@@ -2408,9 +2239,9 @@
  */
 #define RESTORE_LEVELING_AFTER_G28
 //#define ENABLE_LEVELING_AFTER_G28
-// Attention: The values for X0,Y0 are hardcoded in src/lcd/e3v2/creality/lcd_rts.cpp in Line 1842 and 1851
+// Attention: The values for X0,Y0 are hardcoded in src/lcd/e3v2/creality/lcd_rts.cpp around line 2075 and 2096
 //            as the function does not allow to take a float (ex. 117.5)
-//            This applies for ENDER_3S1_PRO, ENDER_3S1_PLUS and ENDER_3S1
+//            This applies for ENDER_3S1_PRO, ENDER_3S1_PLUS
 #if ENABLED(ENDER_3S1_PRO) 
   #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
     //                                     X0,Y0    X1,Y1  X2,Y2   X3,Y3    X4 Y4   X5,Y5  X6,Y6   X7Y7     X8 Y8
@@ -2421,16 +2252,7 @@
     #define MANUALL_BED_LEVEING_5POSITION {117,117, 45,45, 190,45, 45,190, 190,190, 10,10, 225,10, 10,225, 225,225}
     #define MANUALL_BED_CRTOUCH_5POSITION {117,117, 45,45, 190,45, 45,190, 190,190, 25,25, 210,25, 25,190, 210,190}    
   #endif
-#elif ENABLED(ENDER_3S1) 
-  #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
-    //                                     X0,Y0    X1,Y1  X2,Y2   X3,Y3    X4 Y4   X5,Y5  X6,Y6   X7Y7     X8 Y8
-    //                                Point: (1)     (6)      (7)    (8)     (9)      (2)    (3)     (4)     (5)
-    #define MANUALL_BED_LEVEING_5POSITION {117,117, 45,45, 190,45, 45,190, 190,190, 45,45, 190,45, 190,190, 45,190}
-  #else
-    #define MANUALL_BED_LEVEING_5POSITION {117,117, 45,45, 190,45, 190,190, 45,190, 45,45, 190,45, 190,190, 45,190}
-  #endif
 #elif ENABLED(ENDER_3S1_PLUS)
-
   #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
     //                                     X0,Y0    X1,Y1    X2,Y2  X3,Y3   X4 Y4   X5,Y5  X6,Y6   X7,Y7   X8,Y8
     //                                Point: (1)     (6)      (7)    (8)     (9)     (2)    (3)     (4)     (5)
@@ -2440,10 +2262,6 @@
     #define MANUALL_BED_LEVEING_5POSITION {155,157, 45,45, 265,45, 45,270, 265,270, 15,15, 295,15, 15,300, 295,300}
     #define MANUALL_BED_CRTOUCH_5POSITION {155,157, 45,45, 265,45, 45,270, 265,270, 27,27, 283,27, 27,270, 283,270}
   #endif
-#elif ENABLED(ENDER_3) 
-    //                                     X0,Y0    X1,Y1    X2,Y2  X3,Y3   X4 Y4   X5,Y5  X6,Y6   X7,Y7   X8,Y8
-    //                                Point: (1)     (6)      (7)    (7)     (8)     (2)    (3)     (4)     (5)
-  #define MANUALL_BED_LEVEING_5POSITION {117.5,117.5, 45,45, 190,45, 190,190, 45,190, 45,45, 190,45, 190,190, 45,190}  
 #endif
 
 /**
@@ -2537,15 +2355,8 @@
 
   //#define MESH_EDIT_GFX_OVERLAY   // Display a graphics overlay while editing the mesh
 
-  //#define MESH_INSET 50              // Set Mesh bounds as an inset region of the bed
-  //#define GRID_MAX_POINTS_X 5      // Don't use more than 15 points per axis, implementation limited.
-  //#define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
-  //#define MESH_INSET_X 25
-  //#define MESH_INSET_Y 45
-
-  #ifndef GRID_MAX_POINTS_X
-    #define GRID_MAX_POINTS_X 5      // Don't use more than 15 points per axis, implementation limited.
-  #endif
+  //#define MESH_INSET 1              // Set Mesh bounds as an inset region of the bed
+  //#define GRID_MAX_POINTS_X 10      // Don't use more than 15 points per axis, implementation limited.
   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
 
   #define UBL_HILBERT_CURVE       // Use Hilbert distribution for less travel when probing multiple points
@@ -2587,7 +2398,7 @@
   //===========================================================================
 
   #define MESH_INSET 45          // Set Mesh bounds as an inset region of the bed
-  #define GRID_MAX_POINTS_X 5    // Don't use more than 7 points per axis, implementation limited.
+  #define GRID_MAX_POINTS_X 5    // Don't use more than 10 points per axis, implementation limited.
   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
 
   //#define MESH_G28_REST_ORIGIN // After homing all axes ('G28' or 'G28 XYZ') rest Z at Z_MIN_POS
@@ -2607,13 +2418,10 @@
 #endif
 
 // Add a menu item to move between bed corners for manual bed adjustment
-#if ENABLED(ENDER_3S1) && ENABLED(DWIN_CREALITY_LCD)
-//#define LCD_BED_TRAMMING
-#else
 #define LCD_BED_TRAMMING
-#endif
+
 #if ENABLED(LCD_BED_TRAMMING)
-  #define BED_TRAMMING_INSET_LFRB { 45, 45, 45, 45 } // (mm) Left, Front, Right, Back insets
+  #define BED_TRAMMING_INSET_LFRB { 30, 30, 30, 30 } // (mm) Left, Front, Right, Back insets
   #define BED_TRAMMING_HEIGHT      0.0        // (mm) Z height of nozzle at tramming points
   #define BED_TRAMMING_Z_HOP       4.0        // (mm) Z raise between tramming points
   //#define BED_TRAMMING_INCLUDE_CENTER       // Move to the center after the last corner
@@ -2767,12 +2575,6 @@
   #define EEPROM_INIT_NOW   // Init EEPROM on first boot after a new build.
 #endif
 
-// Added for laser implementation
-//#if HAS_CUTTER
-  #define  LASER_FDM_ADDR             1950
-  #define  LASER_Z_AXIS_HIGH_ADDR    1952 // 占用两字节
-//#endif
-
 // @section host
 
 //
@@ -2802,45 +2604,24 @@
 //
 // Preheat Constants - Up to 10 are supported without changes
 //
-#if ENABLED(ENDER_3S1_PRO) || ENABLED(ENDER_3S1_PLUS) || ENABLED(ENDER_3S1)
-  #define PREHEAT_1_LABEL       "PLA"
-  #define PREHEAT_1_TEMP_HOTEND 200
-  #define PREHEAT_1_TEMP_BED     60
-  #define PREHEAT_1_TEMP_CHAMBER 35
-  #define PREHEAT_1_FAN_SPEED    255 // Value from 0 to 255
-  #define PREHEAT_2_LABEL       "ABS"
-  #define PREHEAT_2_TEMP_HOTEND 240
-  #define PREHEAT_2_TEMP_BED    100
-  #define PREHEAT_2_TEMP_CHAMBER 35
-  #define PREHEAT_2_FAN_SPEED    255 // Value from 0 to 255
-  #define PREHEAT_3_LABEL       "PETG"
-  #define PREHEAT_3_TEMP_HOTEND 230
-  #define PREHEAT_3_TEMP_BED     80
-  #define PREHEAT_3_FAN_SPEED   128
-  #define PREHEAT_4_LABEL       "CUSTOM"
-  #define PREHEAT_4_TEMP_HOTEND 190
-  #define PREHEAT_4_TEMP_BED     50
-  #define PREHEAT_4_FAN_SPEED   128
-#else
-  #define PREHEAT_1_LABEL       "PLA"
-  #define PREHEAT_1_TEMP_HOTEND 210
-  #define PREHEAT_1_TEMP_BED     60
-  #define PREHEAT_1_TEMP_CHAMBER 35
-  #define PREHEAT_1_FAN_SPEED     255 // Value from 0 to 255
-  #define PREHEAT_2_LABEL       "ABS"
-  #define PREHEAT_2_TEMP_HOTEND 240
-  #define PREHEAT_2_TEMP_BED    100
-  #define PREHEAT_2_TEMP_CHAMBER 35
-  #define PREHEAT_2_FAN_SPEED   255 // Value from 0 to 255
-  //#define PREHEAT_3_LABEL       "PETG"
-  //#define PREHEAT_3_TEMP_HOTEND 230
-  //#define PREHEAT_3_TEMP_BED     80
-  //#define PREHEAT_3_FAN_SPEED   128
-  //#define PREHEAT_4_LABEL       "CUSTOM"
-  //#define PREHEAT_4_TEMP_HOTEND 190
-  //#define PREHEAT_4_TEMP_BED     50
-  //#define PREHEAT_4_FAN_SPEED   128
-#endif
+#define PREHEAT_1_LABEL       "PLA"
+#define PREHEAT_1_TEMP_HOTEND 200
+#define PREHEAT_1_TEMP_BED     60
+#define PREHEAT_1_TEMP_CHAMBER 35
+#define PREHEAT_1_FAN_SPEED    255 // Value from 0 to 255
+#define PREHEAT_2_LABEL       "ABS"
+#define PREHEAT_2_TEMP_HOTEND 240
+#define PREHEAT_2_TEMP_BED    100
+#define PREHEAT_2_TEMP_CHAMBER 35
+#define PREHEAT_2_FAN_SPEED    255 // Value from 0 to 255
+#define PREHEAT_3_LABEL       "PETG"
+#define PREHEAT_3_TEMP_HOTEND 230
+#define PREHEAT_3_TEMP_BED     80
+#define PREHEAT_3_FAN_SPEED   128
+#define PREHEAT_4_LABEL       "CUSTOM"
+#define PREHEAT_4_TEMP_HOTEND 190
+#define PREHEAT_4_TEMP_BED     50
+#define PREHEAT_4_FAN_SPEED   128
 
 /**
  * @section nozzle park
@@ -3108,7 +2889,7 @@
 // This option overrides the default number of encoder pulses needed to
 // produce one step. Should be increased for high-resolution encoders.
 //
-#define ENCODER_PULSES_PER_STEP 4
+//#define ENCODER_PULSES_PER_STEP 4
 
 //
 // Use this option to override the number of step signals required to
@@ -3905,9 +3686,11 @@
 // :[1,2,3,4,5,6,7,8]
 //#define NUM_M106_FANS 1
 
-// Use software PWM to drive the fan, as for the heaters. This uses a very low frequency
-// which is not as annoying as with the hardware PWM. On the other hand, if this frequency
-// is too low, you should also increment SOFT_PWM_SCALE.
+/**
+ * Use software PWM to drive the fan, as for the heaters. This uses a very low frequency
+ * which is not as annoying as with the hardware PWM. On the other hand, if this frequency
+ * is too low, you should also increment SOFT_PWM_SCALE.
+ */
 #define FAN_SOFT_PWM
 
 /**

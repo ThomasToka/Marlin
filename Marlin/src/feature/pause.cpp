@@ -64,6 +64,8 @@
   #include "../lcd/extui/ui_api.h"
 #elif ENABLED(SOVOL_SV06_RTS)
   #include "../lcd/sovol_rts/sovol_rts.h"
+#elif ENABLED(E3S1PRO_RTS)
+  #include "../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
 
 #include "../lcd/marlinui.h"
@@ -74,10 +76,6 @@
 
 #if ENABLED(POWER_LOSS_RECOVERY)
   #include "powerloss.h"
-#endif
-
-#if ENABLED(E3S1PRO_RTS)
-  #include "../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
 
 #include "../libs/nozzle.h"
@@ -156,15 +154,15 @@ static bool ensure_safe_temperature(const bool wait=true, const PauseMode mode=P
 
   ui.pause_show_message(PAUSE_MESSAGE_HEATING, mode);
 
-  TERN_(E3S1PRO_RTS, RTS_SendHeadCurrentTemp());
-
   #if ENABLED(SOVOL_SV06_RTS)
     rts.gotoPage(ID_Cold_L, ID_Cold_D);
     rts.updateTempE0();
+  #elif ENABLED(E3S1PRO_RTS)
+    RTS_SendHeadCurrentTemp();
   #endif
 
   if (wait) return thermalManager.wait_for_hotend(active_extruder);
-  
+
   // Allow interruption by Emergency Parser M108
   wait_for_heatup = TERN1(PREVENT_COLD_EXTRUSION, !thermalManager.allow_cold_extrude);
   while (wait_for_heatup && ABS(thermalManager.wholeDegHotend(active_extruder) - thermalManager.degTargetHotend(active_extruder)) > (TEMP_WINDOW))
@@ -288,15 +286,13 @@ bool load_filament(const_float_t slow_load_length/*=0*/, const_float_t fast_load
     do {
       if (purge_length > 0) {
         // "Wait for filament purge"
-        if (show_lcd)
-        {
-          ui.pause_show_message(PAUSE_MESSAGE_PURGE);
-          TERN_(E3S1PRO_RTS, RTS_SendHeadCurrentTemp());          
-        }          
+        if (show_lcd) ui.pause_show_message(PAUSE_MESSAGE_PURGE);
 
         #if ENABLED(SOVOL_SV06_RTS)
           rts.updateTempE0();
           rts.gotoPage(ID_Purge_L, ID_Purge_D);
+        #elif ENABLED(E3S1PRO_RTS)
+          RTS_SendHeadCurrentTemp();
         #endif
 
         // Extrude filament to get into hotend
@@ -376,14 +372,13 @@ bool unload_filament(const_float_t unload_length, const bool show_lcd/*=false*/,
     return false;
   }
 
-  if (show_lcd){
-    ui.pause_show_message(PAUSE_MESSAGE_UNLOAD, mode);
-    TERN_(E3S1PRO_RTS, RTS_SendHeadCurrentTemp());
-  }
+  if (show_lcd) ui.pause_show_message(PAUSE_MESSAGE_UNLOAD, mode);
 
   #if ENABLED(SOVOL_SV06_RTS)
     rts.updateTempE0();
     rts.gotoPage(ID_Unload_L, ID_Unload_D);
+  #elif ENABLED(E3S1PRO_RTS)
+    RTS_SendHeadCurrentTemp();
   #endif
 
   // Retract filament
@@ -446,7 +441,6 @@ bool pause_print(const_float_t retract, const xyz_pos_t &park_point, const bool 
   #endif
 
   TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_open(PROMPT_INFO, F("Pause"), FPSTR(DISMISS_STR)));
-
   #if ENABLED(E3S1PRO_RTS)
     RTS_ShowPage(7);
     sdcard_pause_check = true;    
@@ -502,7 +496,6 @@ bool pause_print(const_float_t retract, const xyz_pos_t &park_point, const bool 
   // If axes don't need to home then the nozzle can park
   if (do_park) nozzle.park(0, park_point); // Park the nozzle by doing a Minimum Z Raise followed by an XY Move
   if (!do_park) LCD_MESSAGE(MSG_PARK_FAILED);
-
   TERN_(E3S1PRO_RTS, RTS_SendHeadCurrentTemp());
 
   #if ENABLED(DUAL_X_CARRIAGE)
@@ -541,13 +534,12 @@ void show_continue_prompt(const bool is_reload) {
   DEBUG_ECHOLNPGM("... is_reload:", is_reload);
 
   ui.pause_show_message(is_reload ? PAUSE_MESSAGE_INSERT : PAUSE_MESSAGE_WAITING);
-  
-  TERN_(E3S1PRO_RTS, RTS_SendHeadCurrentTemp());  
-
   #if ENABLED(SOVOL_SV06_RTS)
     rts.updateTempE0();
     rts.gotoPage(ID_Insert_L, ID_Insert_D);
     rts.sendData(Beep, SoundAddr);
+  #elif ENABLED(E3S1PRO_RTS)
+    RTS_SendHeadCurrentTemp();
   #endif
   SERIAL_ECHO_START();
   SERIAL_ECHO(is_reload ? F(_PMSG(STR_FILAMENT_CHANGE_INSERT) "\n") : F(_PMSG(STR_FILAMENT_CHANGE_WAIT) "\n"));
@@ -578,27 +570,24 @@ void wait_for_confirmation(const bool is_reload/*=false*/, const int8_t max_beep
   KEEPALIVE_STATE(PAUSED_FOR_USER);
   TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_do(PROMPT_USER_CONTINUE, GET_TEXT_F(MSG_NOZZLE_PARKED), FPSTR(CONTINUE_STR)));
   TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired(GET_TEXT_F(MSG_NOZZLE_PARKED)));
-
   wait_for_user = true;    // LCD click or M108 will clear this
   while (wait_for_user) {
     impatient_beep(max_beep_count);
 
     // If the nozzle has timed out...
-    if (!nozzle_timed_out){
+    if (!nozzle_timed_out)
       HOTEND_LOOP() nozzle_timed_out |= thermalManager.heater_idle[e].timed_out;
-    }
 
     // Wait for the user to press the button to re-heat the nozzle, then
     // re-heat the nozzle, re-show the continue prompt, restart idle timers, start over
     if (nozzle_timed_out) {
       ui.pause_show_message(PAUSE_MESSAGE_HEAT);
-      #if ENABLED(E3S1PRO_RTS)
-        RTS_ShowPage(7);
-        RTS_SendHeadCurrentTemp();
-      #endif
       #if ENABLED(SOVOL_SV06_RTS)
         rts.updateTempE0();
         rts.gotoPage(ID_HeatNozzle_L, ID_HeatNozzle_D);
+      #elif ENABLED(E3S1PRO_RTS)
+        RTS_ShowPage(7);
+        RTS_SendHeadCurrentTemp();
       #endif
       SERIAL_ECHO_MSG(_PMSG(STR_FILAMENT_CHANGE_HEAT));
 
@@ -614,7 +603,7 @@ void wait_for_confirmation(const bool is_reload/*=false*/, const int8_t max_beep
 
       TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_do(PROMPT_INFO, GET_TEXT_F(MSG_REHEATING)));
 
-      TERN_(EXTENSIBLE_UI, ExtUI::onStatusChanged_P(GET_TEXT(MSG_REHEATING)));
+      LCD_MESSAGE(MSG_REHEATING);
 
       // Re-enable the heaters if they timed out
       HOTEND_LOOP() thermalManager.reset_hotend_idle_timer(e);
@@ -631,10 +620,14 @@ void wait_for_confirmation(const bool is_reload/*=false*/, const int8_t max_beep
       HOTEND_LOOP() thermalManager.heater_idle[e].start(nozzle_timeout);
 
       TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_do(PROMPT_USER_CONTINUE, GET_TEXT_F(MSG_REHEATDONE), FPSTR(CONTINUE_STR)));
-      TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired_P(PSTR("Reheat finished.")));
-      
+      #if ENABLED(EXTENSIBLE_UI)
+        ExtUI::onUserConfirmRequired(GET_TEXT_F(MSG_REHEATDONE));
+      #else
+        LCD_MESSAGE(MSG_REHEATDONE);
+      #endif
+
       IF_DISABLED(PAUSE_REHEAT_FAST_RESUME, wait_for_user = true);
-      
+
       nozzle_timed_out = false;
       first_impatient_beep(max_beep_count);
     }
@@ -799,7 +792,6 @@ void resume_print(
   #endif
 
   TERN_(HAS_FILAMENT_SENSOR, runout.reset());
-
   TERN_(E3S1PRO_RTS, pause_menu_response = PAUSE_RESPONSE_WAIT_FOR);  
 
   ui.reset_status();

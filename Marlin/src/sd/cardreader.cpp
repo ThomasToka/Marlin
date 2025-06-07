@@ -40,9 +40,7 @@
   #include "../lcd/e3v2/creality/dwin.h"
 #elif ENABLED(SOVOL_SV06_RTS)
   #include "../lcd/sovol_rts/sovol_rts.h"
-#endif
-
-#if ENABLED(E3S1PRO_RTS)
+#elif ENABLED(E3S1PRO_RTS)
   #include "../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
 
@@ -173,7 +171,8 @@ CardReader::CardReader() {
     #endif
   #endif
 
-  flag.sdprinting = flag.sdprintdone = flag.mounted = flag.saving = flag.logging = flag.reading = false;
+  flag.sdprinting = flag.sdprintdone = flag.mounted = flag.saving = flag.logging = false;
+  TERN_(E3S1PRO_RTS, flag.reading = false);
   filesize = sdpos = 0;
 
   TERN_(HAS_MEDIA_SUBCALLS, file_subcall_ctr = 0);
@@ -704,13 +703,13 @@ void CardReader::openAndPrintFile(const char *name) {
   queue.inject(cmd);
 }
 
-#if ALL(E3S1PRO_RTS, HAS_CUTTER)
-    void CardReader::openAndPausePrintFile(const char *name) {
-      char cmd[4 + strlen(name) + 1 + 3 + 1]; // Room for "M23 ", filename, "\n", "M24", and null
-      sprintf_P(cmd, M23_STR, name);
-      for (char *c = &cmd[4]; *c; c++) *c = tolower(*c);
-      queue.inject(cmd);
-    }
+#if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+  void CardReader::openAndPausePrintFile(const char *name) {
+    char cmd[4 + strlen(name) + 1 + 3 + 1]; // Room for "M23 ", filename, "\n", "M24", and null
+    sprintf_P(cmd, M23_STR, name);
+    for (char *c = &cmd[4]; *c; c++) *c = tolower(*c);
+    queue.inject(cmd);
+  }
 #endif
 
 /**
@@ -819,7 +818,11 @@ void CardReader::openFileRead(const char * const path, const uint8_t subcall_typ
 
         // Too deep? The firmware has to bail.
         if (file_subcall_ctr > SD_PROCEDURE_DEPTH - 1) {
-          SERIAL_ERROR_MSG("Exceeded max SUBROUTINE depth:", SD_PROCEDURE_DEPTH);
+          #if ENABLED(E3S1PRO_RTS)
+            SERIAL_ERROR_MSG("Exceeded SUBR. depth:", SD_PROCEDURE_DEPTH);
+          #else
+            SERIAL_ERROR_MSG("Exceeded max SUBROUTINE depth:", SD_PROCEDURE_DEPTH);
+          #endif
           kill(GET_TEXT_F(MSG_KILL_SUBCALL_OVERFLOW));
           return;
         }
@@ -829,12 +832,20 @@ void CardReader::openFileRead(const char * const path, const uint8_t subcall_typ
         filespos[file_subcall_ctr] = sdpos;
 
         // For sub-procedures say 'SUBROUTINE CALL target: "..." parent: "..." pos12345'
-        SERIAL_ECHO_MSG("SUBROUTINE CALL target:\"", path, "\" parent:\"", proc_filenames[file_subcall_ctr], "\" pos", sdpos);
+        #if ENABLED(E3S1PRO_RTS)
+          SERIAL_ECHO_MSG("SUBR. CALL target:\"", path, "\" parent:\"", proc_filenames[file_subcall_ctr], "\" pos", sdpos);
+        #else
+          SERIAL_ECHO_MSG("SUBROUTINE CALL target:\"", path, "\" parent:\"", proc_filenames[file_subcall_ctr], "\" pos", sdpos);
+        #endif
         file_subcall_ctr++;
         break;
 
       case 2:      // Resuming previous file after sub-procedure
-        SERIAL_ECHO_MSG("END SUBROUTINE");
+        #if ENABLED(E3S1PRO_RTS)
+          SERIAL_ECHO_MSG("END SUBR.");
+        #else
+          SERIAL_ECHO_MSG("END SUBROUTINE");
+        #endif
         break;
 
     #endif
@@ -870,10 +881,6 @@ inline void echo_write_to_file(const char * const fname) {
   SERIAL_ECHOLNPGM(STR_SD_WRITE_TO_FILE, fname);
 }
 
-inline void echo_readonly_from_file(const char * const fname) {
-  SERIAL_ECHOLNPGM("Reading sd file readonly: ", fname);
-}
-
 //
 // Open a file by DOS path for write
 //
@@ -903,31 +910,32 @@ void CardReader::openFileWrite(const char * const path) {
   openFailed(fname);
 }
 
-/**
- * Open a file by DOS path for readonly (without printing for example to load a thumbnail)
- */
-void CardReader::openFileReadonly(const char * const path) {
-  if (!isMounted()) return;
+ #if ENABLED(E3S1PRO_RTS)
+  /**
+   * Open a file by DOS path for readonly (without printing for example to load a thumbnail)
+   */
+  void CardReader::openFileReadonly(const char * const path) {
+    if (!isMounted()) return;
 
-  announceOpen(2, path);
-  TERN_(HAS_MEDIA_SUBCALLS, file_subcall_ctr = 0);
+    announceOpen(2, path);
+    TERN_(HAS_MEDIA_SUBCALLS, file_subcall_ctr = 0);
 
-  MediaFile *diveDir;
-  const char * const fname = diveToFile(false, diveDir, path);
-  if (!fname) return openFailed(path);
+    MediaFile *diveDir;
+    const char * const fname = diveToFile(false, diveDir, path);
+    if (!fname) return openFailed(path);
 
-  if (file.open(diveDir, fname, O_READ)) {
-    filesize = file.fileSize();
-    sdpos = 0;
-    flag.reading = true;
-    selectFileByName(fname);
-    TERN_(EMERGENCY_PARSER, emergency_parser.disable());
-    echo_readonly_from_file(fname);
-    return;
+    if (myfile.open(diveDir, fname, O_READ)) {
+      filesize = myfile.fileSize();
+      sdpos = 0;
+      flag.reading = true;
+      selectFileByName(fname);
+      TERN_(EMERGENCY_PARSER, emergency_parser.disable());
+      return;
+    }
+
+    openFailed(fname);
   }
-
-  openFailed(fname);
-}
+#endif
 
 /**
  * Check if a file exists by absolute or workDir-relative path
@@ -1141,7 +1149,10 @@ void CardReader::write_command(char * const buf) {
 void CardReader::closefile(const bool store_location/*=false*/) {
   myfile.sync();
   myfile.close();
-  flag.saving = flag.logging = flag.reading = false;
+  flag.saving = flag.logging = false;
+  #if ENABLED(E3S1PRO_RTS)
+    flag.reading = false;
+  #endif
   sdpos = 0;
 
   TERN_(EMERGENCY_PARSER, emergency_parser.enable());

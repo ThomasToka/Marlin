@@ -28,7 +28,6 @@
 
 #include "../../lcd/marlinui.h" // i2c-based BUZZ
 #include "../../libs/buzzer.h"  // Buzzer, if possible
-
 #if ENABLED(E3S1PRO_RTS)
   #include "../../lcd/rts/e3s1pro/lcd_rts.h"
 #endif

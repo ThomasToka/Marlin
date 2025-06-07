@@ -68,11 +68,7 @@ void startOrResumeJob();
 bool printer_busy();
 
 extern bool wait_for_heatup;
-
-#if ENABLED(E3S1PRO_RTS)
-  extern uint8_t language_change_font;
-  extern uint8_t g_soundSetOffOn;
-#endif
+TERN_(E3S1PRO_RTS, extern uint8_t language_change_font);
 
 #if HAS_RESUME_CONTINUE
   extern bool wait_for_user;

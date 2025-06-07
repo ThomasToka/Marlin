@@ -231,7 +231,7 @@ void GcodeSuite::get_destination_from_command() {
           if (parser.seen('I')) cutter.set_enabled(true);       // This is set for backward LightBurn compatibility.
           if (parser.seenval('S')) {
             const float v = parser.value_float(),
-            #if ENABLED(LASER_FEATURE)
+            #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
                         u = laser_device.power16_to_8(v);
             #else
                         u = TERN(LASER_POWER_TRAP, v, cutter.power_to_range(v));
@@ -526,7 +526,9 @@ void GcodeSuite::process_parsed_command(bool no_ok/*=false*/) {
       case 17: M17(); break;                                      // M17: Enable all stepper motors
 
       #if HAS_MEDIA
-        case 19: M19(); break;                                    // M19: Open a file readonly without starting a print
+        #if ENABLED(E3S1PRO_RTS)
+          case 19: M19(); break;                                  // M19: Open a file readonly without starting a print
+        #endif
         case 20: M20(); break;                                    // M20: List SD card
         case 21: M21(); break;                                    // M21: Init SD card
         case 22: M22(); break;                                    // M22: Release SD card

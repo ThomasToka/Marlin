@@ -32,7 +32,6 @@
 #if ENABLED(MESH_BED_LEVELING)
   #include "../../feature/bedlevel/bedlevel.h"
 #endif
-
 #if ENABLED(E3S1PRO_RTS)
   #include "../../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
@@ -43,12 +42,10 @@
     if (TERN1(BABYSTEP_HOTEND_Z_OFFSET, active_extruder == 0)) {
       probe.offset.z += offs;
       SERIAL_ECHO_MSG(STR_PROBE_OFFSET " " STR_Z, probe.offset.z);
-
       #if ENABLED(E3S1PRO_RTS)
         zprobe_zoffset = probe.offset.z;
         rtscheck.RTS_SndData(probe.offset.z * 100, AUTO_BED_LEVEL_ZOFFSET_VP);
       #endif
-    
     }
     else {
       #if ENABLED(BABYSTEP_HOTEND_Z_OFFSET)

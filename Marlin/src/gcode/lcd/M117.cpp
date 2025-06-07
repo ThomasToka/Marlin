@@ -50,10 +50,10 @@ void GcodeSuite::M117() {
               int end = start;
               bool isFloat = false;
               while (isdigit(parser.string_arg[end]) || parser.string_arg[end] == '.' || (end == start && parser.string_arg[end] == '-')) {
-                  if (parser.string_arg[end] == '.') {
-                      isFloat = true;
-                  }
-                  ++end;
+                if (parser.string_arg[end] == '.') {
+                    isFloat = true;
+                }
+                ++end;
               }
 
               char number_str[20];  // Adjust buffer size as needed
@@ -61,30 +61,24 @@ void GcodeSuite::M117() {
               number_str[end - start] = '\0';
 
               if (isFloat) {
-                  float number = strtof(number_str, nullptr);  // Parse as float
-                  if (parser.string_arg[i] == 'Z') {
-                    picLayerHeight = number;  // Float for Z variable
-                    #if ENABLED(LCD_RTS_DEBUG_LCD)
-                      SERIAL_ECHO_MSG("picLayerHeight: ", picLayerHeight);
-                    #endif
-                  }
+                float number = strtof(number_str, nullptr);  // Parse as float
+                if (parser.string_arg[i] == 'Z') {
+                  picLayerHeight = number;  // Float for Z variable
+                }
               } else {
-                  int number = strtol(number_str, nullptr, 10);  // Parse as int
-                  if (parser.string_arg[i] == 'L') {
-                      hasL = true;
-                      m117_layer = number;  // Integer for L variable
-                  } else if (parser.string_arg[i] == 'G') {
-                      hasG = true;
-                      picFilament_g_todo = number;  // Integer for G variable
-                  } else if (parser.string_arg[i] == 'M') {
-                      hasM = true;
-                      picFilament_m_todo = number;  // Integer for M variable
-                  } else if (parser.string_arg[i] == 'Q') {
-                      picLayers = number;  // Integer for Q variable
-                      #if ENABLED(LCD_RTS_DEBUG_LCD)
-                        SERIAL_ECHO_MSG("picLayers: ", picLayers);
-                      #endif
-                  }
+                int number = strtol(number_str, nullptr, 10);  // Parse as int
+                if (parser.string_arg[i] == 'L') {
+                  hasL = true;
+                  m117_layer = number;  // Integer for L variable
+                } else if (parser.string_arg[i] == 'G') {
+                  hasG = true;
+                  picFilament_g_todo = number;  // Integer for G variable
+                } else if (parser.string_arg[i] == 'M') {
+                  hasM = true;
+                  picFilament_m_todo = number;  // Integer for M variable
+                } else if (parser.string_arg[i] == 'Q') {
+                  picLayers = number;  // Integer for Q variable
+                }
               }
           }
       }
@@ -92,9 +86,9 @@ void GcodeSuite::M117() {
       if (hasL && hasG && hasM) {
         rtscheck.RTS_SndData(m117_layer, PRINT_LAYERS_DONE_VP);
         float current_z_pos = current_position.z;
-          rtscheck.RTS_SndData(current_z_pos * 100, PRINT_CURRENT_Z_VP);
-          rtscheck.RTS_SndData(picFilament_g_todo, PRINT_FILAMENT_G_TODO_VP);
-          rtscheck.RTS_SndData(picFilament_m_todo, PRINT_FILAMENT_M_TODO_VP);
+        rtscheck.RTS_SndData(current_z_pos * 100, PRINT_CURRENT_Z_VP);
+        rtscheck.RTS_SndData(picFilament_g_todo, PRINT_FILAMENT_G_TODO_VP);
+        rtscheck.RTS_SndData(picFilament_m_todo, PRINT_FILAMENT_M_TODO_VP);
         if(m117_layer == 1){
           rtscheck.RTS_SndData(picFilament_g_todo, PRINT_FILAMENT_G_VP);
           rtscheck.RTS_SndData(picFilament_m_todo, PRINT_FILAMENT_M_VP);
@@ -103,14 +97,6 @@ void GcodeSuite::M117() {
           RTS_SendM600Icon(true);
           RTS_ShowPage(10);
         }
-        #if ENABLED(LCD_RTS_DEBUG_LCD)
-          SERIAL_ECHO_MSG("Current Position Z: ", current_z_pos);
-          SERIAL_ECHO_MSG("L-command: ", m117_layer);
-          SERIAL_ECHO_MSG("G-command: ", picFilament_g_todo);
-          SERIAL_ECHO_MSG("M-command: ", picFilament_m_todo);
-          SERIAL_ECHO_MSG("picLayers: ", picLayers);
-          SERIAL_ECHO_MSG("picLayerHeight: ", picLayerHeight);                    
-        #endif
       }
     } else {
       RTS_CleanPrintAndSelectFile();      
@@ -121,9 +107,6 @@ void GcodeSuite::M117() {
       } else {
         strcpy(msg, parser.string_arg);
       }
-      #if ENABLED(LCD_RTS_DEBUG_LCD)      
-        SERIAL_ECHO_MSG("msg M117: ", msg);
-      #endif
       if (strlen(msg) > 25) {
         RTS_ResetSingleVP(PRINT_FILE_TEXT_VP);
         rtscheck.RTS_SndData(msg, SELECT_FILE_TEXT_VP);
@@ -133,7 +116,7 @@ void GcodeSuite::M117() {
       }
     }
   #else
-    if (parser.string_arg && parser.string_arg[0])
+    if (parser.has_string())
       ui.set_status_no_expire(parser.string_arg);
     else
       ui.reset_status();
@@ -142,4 +125,3 @@ void GcodeSuite::M117() {
 }
 
 #endif // HAS_STATUS_MESSAGE
-

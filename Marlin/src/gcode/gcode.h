@@ -90,8 +90,7 @@
  * M18  - Disable all stepper motors; same as M84
  *
  *** Print from Media (SDSUPPORT) ***
- * 
- *   - Open a file readonly without starting a print. (Requires SDSUPPORT)
+ * M19  - Open a file readonly without starting a print. (Requires SDSUPPORT AND E3S1PRO_RTS)
  * M20  - List SD card. (Requires SDSUPPORT)
  * M21  - Init SD card. (Requires SDSUPPORT) With MULTI_VOLUME select a drive with 'M21 Pn' / 'M21 S' / 'M21 U'.
  * M22  - Release SD card. (Requires SDSUPPORT)
@@ -682,7 +681,9 @@ private:
   static void M18_M84();
 
   #if HAS_MEDIA
-    static void M19();
+    #if ENABLED(E3S1PRO_RTS)
+      static void M19();
+    #endif
     static void M20();
     static void M21();
     static void M22();
@@ -938,7 +939,6 @@ private:
 
   #if HAS_EXTRUDERS
     static void M221();
-    static void M221_report(const bool forReplay=true);    
   #endif
 
   #if ENABLED(DIRECT_PIN_CONTROL)

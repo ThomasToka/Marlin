@@ -30,10 +30,7 @@
 #if ENABLED(AIR_EVACUATION)
 
 #include "../gcode.h"
-
-#if ALL(E3S1PRO_RTS, HAS_CUTTER)
-  #include "../../feature/spindle_laser.h"
-#endif
+#include "../../feature/spindle_laser.h"
 
 /**
  * M10: Vacuum or Blower On

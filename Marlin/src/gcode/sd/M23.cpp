@@ -27,7 +27,6 @@
 #include "../gcode.h"
 #include "../../sd/cardreader.h"
 #include "../../lcd/marlinui.h"
-
 #if ENABLED(E3S1PRO_RTS)
   #include "../../lcd/rts/e3s1pro/lcd_rts.h"
   #include "../../feature/runout.h"
@@ -54,7 +53,6 @@ void GcodeSuite::M23() {
       }
     #endif
   #endif
-  
   card.openFileRead(parser.string_arg);
 
   TERN_(SET_PROGRESS_PERCENT, ui.set_progress(0));

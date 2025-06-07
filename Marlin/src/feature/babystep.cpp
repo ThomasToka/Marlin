@@ -84,7 +84,7 @@ void Babystep::add_steps(const AxisEnum axis, const int16_t distance) {
   TERN_(BABYSTEPPING, if (has_steps()) stepper.initiateBabystepping());
 }
 
-#if ALL(E3S1PRO_RTS, HAS_CUTTER)
+#if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
   void Babystep::add_mm_laser(const AxisEnum axis, const_float_t mm) {
     add_steps_laser(axis, mm * planner.settings.axis_steps_per_mm[axis]);
   }

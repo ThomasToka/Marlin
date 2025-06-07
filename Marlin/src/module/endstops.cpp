@@ -33,6 +33,8 @@
 
 #if ENABLED(SOVOL_SV06_RTS)
   #include "../lcd/sovol_rts/sovol_rts.h"
+#elif ENABLED(E3S1PRO_RTS)
+  #include "../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
 
 #if ENABLED(FT_MOTION)
@@ -65,9 +67,6 @@
   #include "probe.h"
 #endif
 
-#if ENABLED(E3S1PRO_RTS)
-  #include "../lcd/rts/e3s1pro/lcd_rts.h"
-#endif
 #define DEBUG_OUT ALL(USE_SENSORLESS, DEBUG_LEVELING_FEATURE)
 #include "../core/debug_out.h"
 
@@ -320,7 +319,6 @@ void Endstops::not_homing() {
 #if ENABLED(VALIDATE_HOMING_ENDSTOPS)
   // If the last move failed to trigger an endstop, call kill
   void Endstops::validate_homing_move() {
-    
     if (trigger_state()) {
       hit_on_purpose();
     } else {

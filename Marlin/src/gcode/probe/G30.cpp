@@ -103,11 +103,7 @@ void GcodeSuite::G30() {
         F(  " Z:"), p_float_t(measured_z, 3)
       );
       msg.echoln();
-      #if ANY(DWIN_LCD_PROUI, DWIN_CREALITY_LCD_JYERSUI)
-        ui.set_status(msg);
-      #endif
-
-      #if ENABLED(E3S1PRO_RTS)
+      #if ALL(E3S1PRO_RTS, DYNAMIC_TRAMMING)
         struct TrammingPoint {
           float x;
           float y;

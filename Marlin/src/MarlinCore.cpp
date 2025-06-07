@@ -269,10 +269,6 @@
   #include "tests/marlin_tests.h"
 #endif
 
-#if ENABLED(EEPROM_DEMARCATE)
-  DEMARCATE_T demarcate_data;  //  æ ‡å®šæ•°æ®
-#endif
-
 #if HAS_RS485_SERIAL
   #include "feature/rs485.h"
 #endif
@@ -294,7 +290,6 @@ bool wait_for_heatup = false;
 
 #if ENABLED(E3S1PRO_RTS)
   uint8_t language_change_font;
-  uint8_t g_soundSetOffOn; 
   bool eeprom_save_flag = false;
 #endif
 
@@ -416,34 +411,27 @@ void startOrResumeJob() {
     }
   }
 
-  #if ALL(E3S1PRO_RTS, LASER_FEATURE)
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
     inline void abortSDEngraving() {
       IF_DISABLED(NO_SD_AUTOSTART, card.autofile_cancel());
       card.abortFilePrintNow(TERN_(SD_RESORT, true));
-
       queue.clear();
       quickstop_stepper();
-
       print_job_timer.abort();
       laser_device.quick_stop();
-
       wait_for_heatup = false;
-
       TERN_(POWER_LOSS_RECOVERY, recovery.purge());
-
       #ifdef EVENT_GCODE_SD_ABORT_LASER
         queue.inject(F(EVENT_GCODE_SD_ABORT_LASER));
       #endif
-
       TERN_(PASSWORD_AFTER_SD_PRINT_ABORT, password.lock_machine());
     }
+
+    void get_sdcard_laser_range();
+
   #endif
 
 #endif // HAS_MEDIA
-
-#if ALL(E3S1PRO_RTS, LASER_FEATURE)
-  void get_sdcard_laser_range();
-#endif
 
 /**
  * Minimal management of Marlin's core activities:
@@ -474,7 +462,6 @@ inline void manage_inactivity(const bool no_stepper_sleep=false) {
   if (gcode.stepper_max_timed_out(ms)) {
     SERIAL_ERROR_START();
     SERIAL_ECHOLN(F(STR_KILL_PRE), F(STR_KILL_INACTIVE_TIME), parser.command_ptr);
-
     #if ENABLED(E3S1PRO_RTS)
       waitway = 0;
       RTS_ShowPage(41);
@@ -494,7 +481,7 @@ inline void manage_inactivity(const bool no_stepper_sleep=false) {
 
       static bool already_shutdown_steppers; // = false
 
-      if (!has_blocks && !do_reset_timeout && gcode.stepper_inactive_timeout()&&(!card.isPrinting())&&(!card.isPaused())) {
+      if (!has_blocks && !do_reset_timeout && gcode.stepper_inactive_timeout() && (!card.isPrinting()) && (!card.isPaused())) {
         if (!already_shutdown_steppers) {
           already_shutdown_steppers = true;
 
@@ -846,7 +833,7 @@ void idle(const bool no_stepper_sleep/*=false*/) {
   // Handle filament runout sensors
   #if HAS_FILAMENT_SENSOR
     if (TERN1(HAS_PRUSA_MMU2, !mmu2.enabled()) && TERN1(HAS_PRUSA_MMU3, !mmu3.enabled())){
-      #if ALL(E3S1PRO_RTS, LASER_FEATURE)
+      #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
         if(laser_device.is_laser_device())
         {
         }else
@@ -865,7 +852,7 @@ void idle(const bool no_stepper_sleep/*=false*/) {
 
   // Handle Power-Loss Recovery
   #if ENABLED(POWER_LOSS_RECOVERY) && PIN_EXISTS(POWER_LOSS)
-    #if ALL(E3S1PRO_RTS, LASER_FEATURE)
+    #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
       if(laser_device.is_laser_device())
       {
       }else
@@ -897,15 +884,15 @@ void idle(const bool no_stepper_sleep/*=false*/) {
   #if ENABLED(SOVOL_SV06_RTS)
     RTS_Update();
   #elif ENABLED(E3S1PRO_RTS)
-    #if ENABLED(LASER_FEATURE)
+    #if ENABLED(E3S1PRO_RTS_LASER)
       if(laser_device.is_laser_device())
       {
         RTS_UpdateLaser();
       }else
     #endif
-      {
-        RTS_Update();
-      }
+    {
+      RTS_Update();
+    }
   #else
     ui.update();
   #endif
@@ -1380,9 +1367,7 @@ void setup() {
       " | Author: " STRING_CONFIG_H_AUTHOR
     );
   #endif
-
   SERIAL_ECHO_MSG(" Compiled: " __DATE__" " __TIME__);
-
   SERIAL_ECHO_MSG(STR_FREE_MEMORY, hal.freeMemory(), STR_PLANNER_BUFFER_BYTES, sizeof(block_t) * (BLOCK_BUFFER_SIZE));
 
   // Some HAL need precise delay adjustment
@@ -1427,7 +1412,7 @@ void setup() {
     #endif
   #endif
 
-  #if HAS_MEDIA
+  #if HAS_MEDIA && DISABLED(E3S1PRO_RTS)
     SETUP_RUN(card.init());           // Prepare for media usage
     #if ANY(SDCARD_EEPROM_EMULATION, POWER_LOSS_RECOVERY)
       SETUP_RUN(card.mount());        // Mount media with settings before first_load
@@ -1439,13 +1424,7 @@ void setup() {
     SETUP_RUN(settings.load_lcd_state());
   #endif
 
-  #if ENABLED(E3S1PRO_RTS)
-    lang = language_change_font;
-  #else
-    #if HAS_MULTI_LANGUAGE
-      TERN_(HAS_M414_COMMAND, lang = language_change_font);
-    #endif
-  #endif
+  TERN_(E3S1PRO_RTS, lang = language_change_font);
 
   #if ALL(HAS_WIRED_LCD, SHOW_BOOTSCREEN)
     SETUP_RUN(ui.show_bootscreen());
@@ -1499,9 +1478,10 @@ void setup() {
     OUT_WRITE(PHOTOGRAPH_PIN, LOW);
   #endif
 
-  #if ENABLED(LASER_FEATURE)
-    //SETUP_RUN(cutter.init());
-    SETUP_RUN(laser_device.soft_pwm_init()); 
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+    SETUP_RUN(laser_device.soft_pwm_init());
+  #elif HAS_CUTTER
+    SETUP_RUN(cutter.init());
   #endif
 
   #if ENABLED(COOLANT_MIST)
@@ -1717,9 +1697,9 @@ void setup() {
     BL24CXX::init();
     const uint8_t err = BL24CXX::check();
     SERIAL_ECHO_TERNARY(err, "BL24CXX Check ", "failed", "succeeded", "!\n");
-    #if ALL(E3S1PRO_RTS, LASER_FEATURE)
-      laser_device.get_device_form_eeprom(); // 107011   
-      laser_device.get_z_axis_high_form_eeprom();
+    #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+      laser_device.get_device_from_eeprom(); // 107011   
+      laser_device.get_z_axis_high_from_eeprom();
     #endif    
   #endif
 
@@ -1728,7 +1708,7 @@ void setup() {
   #elif ENABLED(SOVOL_SV06_RTS)
     SETUP_RUN(rts.init());
   #elif ENABLED(E3S1PRO_RTS)
-    #if ENABLED(LASER_FEATURE)
+    #if ENABLED(E3S1PRO_RTS_LASER)
       if(laser_device.is_laser_device()) laser_device.laser_power_open();
     #endif
     delay(500);
@@ -1821,7 +1801,7 @@ void loop() {
     idle();
 
     #if HAS_MEDIA
-      #if ALL(E3S1PRO_RTS, LASER_FEATURE)
+      #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
         if(laser_device.is_laser_device())
         {
           if (card.flag.abort_sd_printing) abortSDEngraving();

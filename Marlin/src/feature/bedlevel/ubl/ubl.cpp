@@ -48,7 +48,7 @@ void unified_bed_leveling::echo_name() { SERIAL_ECHOPGM("Unified Bed Leveling");
 void unified_bed_leveling::report_current_mesh() {
   if (!leveling_is_valid()) return;
   SERIAL_ECHO_MSG("  G29 I999");
-  GRID_LOOP_USED(x, y)
+  GRID_LOOP_COND(x, y)
     if (!isnan(z_values[x][y])) {
       SERIAL_ECHO_START();
       SERIAL_ECHOLN(F("  M421 I"), x, F(" J"), y, FPSTR(SP_Z_STR), p_float_t(z_values[x][y], 4));
@@ -63,32 +63,52 @@ void unified_bed_leveling::report_state() {
 }
 
 int8_t unified_bed_leveling::storage_slot;
+
 float unified_bed_leveling::z_values[GRID_MAX_POINTS_X][GRID_MAX_POINTS_Y];
 
-xy_uint8_t unified_bed_leveling::max_points;
+#if DISABLED(DYNAMIC_LEVELING)
+    #define _GRIDPOS(A,N) (MESH_MIN_##A + N * (MESH_##A##_DIST))
 
-float unified_bed_leveling::get_mesh_x(const uint8_t i) {
-  return lcd_rts_settings.probe_margin_x + i * get_mesh_x_dist();
-}
+    const float
+    unified_bed_leveling::_mesh_index_to_xpos[GRID_MAX_POINTS_X] PROGMEM = ARRAY_N(GRID_MAX_POINTS_X,
+      _GRIDPOS(X,  0), _GRIDPOS(X,  1), _GRIDPOS(X,  2), _GRIDPOS(X,  3),
+      _GRIDPOS(X,  4), _GRIDPOS(X,  5), _GRIDPOS(X,  6), _GRIDPOS(X,  7),
+      _GRIDPOS(X,  8), _GRIDPOS(X,  9), _GRIDPOS(X, 10), _GRIDPOS(X, 11),
+      _GRIDPOS(X, 12), _GRIDPOS(X, 13), _GRIDPOS(X, 14), _GRIDPOS(X, 15)
+    ),
+    unified_bed_leveling::_mesh_index_to_ypos[GRID_MAX_POINTS_Y] PROGMEM = ARRAY_N(GRID_MAX_POINTS_Y,
+      _GRIDPOS(Y,  0), _GRIDPOS(Y,  1), _GRIDPOS(Y,  2), _GRIDPOS(Y,  3),
+      _GRIDPOS(Y,  4), _GRIDPOS(Y,  5), _GRIDPOS(Y,  6), _GRIDPOS(Y,  7),
+      _GRIDPOS(Y,  8), _GRIDPOS(Y,  9), _GRIDPOS(Y, 10), _GRIDPOS(Y, 11),
+      _GRIDPOS(Y, 12), _GRIDPOS(Y, 13), _GRIDPOS(Y, 14), _GRIDPOS(Y, 15)
+    );
+#endif
 
-float unified_bed_leveling::get_mesh_y(const uint8_t i) {
-  if (i == 0) {
-      return lcd_rts_settings.probe_margin_y_front;
-  } else if (i == (bedlevel.max_points.y - 1)) {
-      return Y_BED_SIZE - lcd_rts_settings.probe_margin_y_back;
-  } else {
-      return lcd_rts_settings.probe_margin_y_back + i * get_mesh_y_dist();
+#if ENABLED(DYNAMIC_LEVELING)
+  xy_uint8_t unified_bed_leveling::max_points;
+
+  float unified_bed_leveling::get_mesh_x(const uint8_t i) {
+    return lcd_rts_settings.probe_margin_x + i * get_mesh_x_dist();
   }
-  //return lcd_rts_settings.probe_margin_y_front + i * get_mesh_y_dist();
-}
 
-float unified_bed_leveling::get_mesh_x_dist() {
-    return float((X_BED_SIZE - lcd_rts_settings.probe_margin_x) - (lcd_rts_settings.probe_margin_x)) / (bedlevel.max_points.x - 1);
-}
-// TODO: to reach the y max position here - margin_x is needed
-float unified_bed_leveling::get_mesh_y_dist() {
-    return float((Y_BED_SIZE - lcd_rts_settings.probe_margin_y_front) - (lcd_rts_settings.probe_margin_y_back)) / (bedlevel.max_points.y - 1);
-}
+  float unified_bed_leveling::get_mesh_y(const uint8_t i) {
+    if (i == 0) {
+        return lcd_rts_settings.probe_margin_y_front;
+    } else if (i == (bedlevel.max_points.y - 1)) {
+        return Y_BED_SIZE - lcd_rts_settings.probe_margin_y_back;
+    } else {
+        return lcd_rts_settings.probe_margin_y_back + i * get_mesh_y_dist();
+    }
+  }
+
+  float unified_bed_leveling::get_mesh_x_dist() {
+      return float((X_BED_SIZE - lcd_rts_settings.probe_margin_x) - (lcd_rts_settings.probe_margin_x)) / (bedlevel.max_points.x - 1);
+  }
+
+  float unified_bed_leveling::get_mesh_y_dist() {
+      return float((Y_BED_SIZE - lcd_rts_settings.probe_margin_y_front) - (lcd_rts_settings.probe_margin_y_back)) / (bedlevel.max_points.y - 1);
+  }
+#endif
 
 volatile int16_t unified_bed_leveling::encoder_diff;
 
@@ -100,7 +120,7 @@ void unified_bed_leveling::reset() {
   storage_slot = -1;
   ZERO(z_values);
   #if ENABLED(EXTENSIBLE_UI)
-    GRID_LOOP_USED(x, y) ExtUI::onMeshUpdate(x, y, 0);
+    GRID_LOOP(x, y) ExtUI::onMeshUpdate(x, y, 0);
   #endif
   if (was_enabled) report_current_position();
 }
@@ -111,7 +131,7 @@ void unified_bed_leveling::invalidate() {
 }
 
 void unified_bed_leveling::set_all_mesh_points_to_value(const_float_t value) {
-  GRID_LOOP_USED(x, y) {
+  GRID_LOOP_COND(x, y) {
     z_values[x][y] = value;
     TERN_(EXTENSIBLE_UI, ExtUI::onMeshUpdate(x, y, value));
   }
@@ -130,14 +150,14 @@ void unified_bed_leveling::set_all_mesh_points_to_value(const_float_t value) {
         return Z_STEPS_NAN; // If Z is out of range, return our custom 'NaN'
       return int16_t(z_scaled);
     };
-    GRID_LOOP_USED(x, y) stored_values[x][y] = z_to_store(in_values[x][y]);
+    GRID_LOOP_COND(x, y) stored_values[x][y] = z_to_store(in_values[x][y]);
   }
 
   void unified_bed_leveling::set_mesh_from_store(const mesh_store_t &stored_values, bed_mesh_t &out_values) {
     auto store_to_z = [](const int16_t z_scaled) {
       return z_scaled == Z_STEPS_NAN ? NAN : z_scaled / mesh_store_scaling;
     };
-    GRID_LOOP_USED(x, y) out_values[x][y] = store_to_z(stored_values[x][y]);
+    GRID_LOOP_COND(x, y) out_values[x][y] = store_to_z(stored_values[x][y]);
   }
 
 #endif // OPTIMIZED_MESH_STORAGE
@@ -156,7 +176,7 @@ static void serial_echo_xy(const uint8_t sp, const int16_t x, const int16_t y) {
 
 static void serial_echo_column_labels(const uint8_t sp) {
   SERIAL_ECHO_SP(7);
-  for (uint8_t i = 0; i < GRID_USED_POINTS_X; ++i) {
+  for (uint8_t i = 0; i < TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X); ++i) {
     if (i < 10) SERIAL_CHAR(' ');
     SERIAL_ECHO(i);
     SERIAL_ECHO_SP(sp);
@@ -174,16 +194,16 @@ static void serial_echo_column_labels(const uint8_t sp) {
 void unified_bed_leveling::display_map(const uint8_t map_type) {
   const bool was = gcode.set_autoreport_paused(true);
 
-  uint8_t eachsp = 1 + 6 + 1,                           // [-3.567]
-                    twixt = eachsp * (GRID_USED_POINTS_X) - 9 * 2; // Leading 4sp, Coordinates 9sp each
+  IF_DISABLED(DYNAMIC_LEVELING, constexpr) uint8_t eachsp = 1 + 6 + 1,                           // [-3.567]
+                    twixt = eachsp * (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X)) - 9 * 2; // Leading 4sp, Coordinates 9sp each
 
   const bool human = !(map_type & 0x3), csv = map_type == 1, lcd = map_type == 2, comp = map_type & 0x4;
 
   SERIAL_ECHOPGM("\nBed Topography Report");
   if (human) {
     SERIAL_ECHOLNPGM(":\n");
-    serial_echo_xy(4, (lcd_rts_settings.probe_margin_x), (Y_BED_SIZE - lcd_rts_settings.probe_margin_y_front));
-    serial_echo_xy(twixt, (X_BED_SIZE - lcd_rts_settings.probe_margin_x), (Y_BED_SIZE - lcd_rts_settings.probe_margin_y_front));
+    serial_echo_xy(4, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_X)), (TERN(DYNAMIC_LEVELING, (Y_BED_SIZE - lcd_rts_settings.probe_margin_y_front), MESH_MAX_Y)));
+    serial_echo_xy(twixt, (TERN(DYNAMIC_LEVELING, (X_BED_SIZE - lcd_rts_settings.probe_margin_x), MESH_MAX_X)), (TERN(DYNAMIC_LEVELING, (Y_BED_SIZE - lcd_rts_settings.probe_margin_y_front), MESH_MAX_Y)));
     SERIAL_EOL();
     serial_echo_column_labels(eachsp - 2);
   }
@@ -196,7 +216,7 @@ void unified_bed_leveling::display_map(const uint8_t map_type) {
   const xy_int8_t curr = closest_indexes(xy_pos_t(current_position) + probe.offset_xy);
 
   if (!lcd) SERIAL_EOL();
-  for (int8_t j = (GRID_USED_POINTS_Y) - 1; j >= 0; j--) {
+  for (int8_t j = (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_Y, GRID_MAX_POINTS_Y)) - 1; j >= 0; j--) {
 
     // Row Label (J index)
     if (human) {
@@ -206,7 +226,7 @@ void unified_bed_leveling::display_map(const uint8_t map_type) {
     }
 
     // Row Values (I indexes)
-    for (uint8_t i = 0; i < GRID_USED_POINTS_X; ++i) {
+    for (uint8_t i = 0; i < TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X); ++i) {
 
       // Opening Brace or Space
       const bool is_current = i == curr.x && j == curr.y;
@@ -223,7 +243,7 @@ void unified_bed_leveling::display_map(const uint8_t map_type) {
         if (human && f >= 0) SERIAL_CHAR(f > 0 ? '+' : ' ');  // Display sign also for positive numbers (' ' for 0)
         SERIAL_ECHO(p_float_t(f, 3));                         // Positive: 5 digits, Negative: 6 digits
       }
-      if (csv && i < (GRID_USED_POINTS_X) - 1) SERIAL_CHAR('\t');
+      if (csv && i < (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X)) - 1) SERIAL_CHAR('\t');
 
       // Closing Brace or Space
       if (human) SERIAL_CHAR(is_current ? ']' : ' ');
@@ -240,10 +260,9 @@ void unified_bed_leveling::display_map(const uint8_t map_type) {
   if (human) {
     serial_echo_column_labels(eachsp - 2);
     SERIAL_EOL();
-    // TODO: To show the right point positions here probe_margin_x is needed
-    serial_echo_xy(4, (lcd_rts_settings.probe_margin_x), (lcd_rts_settings.probe_margin_x));
-    // TODO: To show the right point positions here probe_margin_x is needed    
-    serial_echo_xy(twixt, (X_BED_SIZE - lcd_rts_settings.probe_margin_x), (lcd_rts_settings.probe_margin_x));
+    // TODO: Is this the right way to do this?
+    serial_echo_xy(4, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_X)), (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_Y)));
+    serial_echo_xy(twixt, (TERN(DYNAMIC_LEVELING, (X_BED_SIZE - lcd_rts_settings.probe_margin_x), MESH_MAX_X)), (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_Y)));
     SERIAL_EOL();
     SERIAL_EOL();
   }

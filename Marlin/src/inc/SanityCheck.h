@@ -275,16 +275,14 @@ static_assert(COUNT(arm) == LOGICAL_AXES, "AXIS_RELATIVE_MODES must contain " _L
 /**
  * Validate bed size
  */
-#if DISABLED(E3S1PRO_RTS)
-  #if !defined(X_BED_SIZE) || !defined(Y_BED_SIZE)
-    #error "X_BED_SIZE and Y_BED_SIZE are required!"
-  #else
-    #if HAS_X_AXIS
-      static_assert(X_MAX_LENGTH >= X_BED_SIZE, "Movement bounds (X_MIN_POS, X_MAX_POS) are too narrow to contain X_BED_SIZE.");
-    #endif
-    #if HAS_Y_AXIS
-      static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS) are too narrow to contain Y_BED_SIZE.");
-    #endif
+#if !defined(X_BED_SIZE) || !defined(Y_BED_SIZE)
+  #error "X_BED_SIZE and Y_BED_SIZE are required!"
+#else
+  #if HAS_X_AXIS
+    static_assert(X_MAX_LENGTH >= X_BED_SIZE, "Movement bounds (X_MIN_POS, X_MAX_POS) are too narrow to contain X_BED_SIZE.");
+  #endif
+  #if HAS_Y_AXIS
+    static_assert(Y_MAX_LENGTH >= Y_BED_SIZE, "Movement bounds (Y_MIN_POS, Y_MAX_POS) are too narrow to contain Y_BED_SIZE.");
   #endif
 #endif
 
@@ -1670,12 +1668,10 @@ static_assert(NUM_SERVOS <= NUM_SERVO_PLUGS, "NUM_SERVOS (or some servo index) i
     #error "AUTO_BED_LEVELING_UBL does not yet support POLAR printers."
   #elif DISABLED(EEPROM_SETTINGS)
     #error "AUTO_BED_LEVELING_UBL requires EEPROM_SETTINGS."
-  #elif DISABLED(E3S1PRO_RTS)
-    #if !WITHIN(GRID_MAX_POINTS_X, 3, 255) || !WITHIN(GRID_MAX_POINTS_Y, 3, 255)
-      #error "GRID_MAX_POINTS_[XY] must be between 3 and 255."
-    #endif
+  #elif !WITHIN(GRID_MAX_POINTS_X, 3, 255) || !WITHIN(GRID_MAX_POINTS_Y, 3, 255)
+    #error "GRID_MAX_POINTS_[XY] must be between 3 and 255."
   #elif ALL(UBL_HILBERT_CURVE, DELTA)
-    #error "UBL_HILBERT_CURVE can only be used with a square / rectangular printable area."    
+    #error "UBL_HILBERT_CURVE can only be used with a square / rectangular printable area."
   #endif
 #elif ENABLED(MESH_BED_LEVELING)
   #if ENABLED(DELTA)
@@ -1698,11 +1694,8 @@ static_assert(NUM_SERVOS <= NUM_SERVO_PLUGS, "NUM_SERVOS (or some servo index) i
 #if ALL(HAS_MESH, CLASSIC_JERK)
   static_assert(DEFAULT_ZJERK > 0.1, "Low DEFAULT_ZJERK values are incompatible with mesh-based leveling.");
 #endif
-
-#if DISABLED(E3S1PRO_RTS)
-  #if HAS_MESH && DGUS_LCD_UI_IA_CREALITY && GRID_MAX_POINTS > 25
-    #error "DGUS_LCD_UI IA_CREALITY requires a mesh with no more than 25 points as defined by GRID_MAX_POINTS_X/Y."
-  #endif
+#if HAS_MESH && DGUS_LCD_UI_IA_CREALITY && GRID_MAX_POINTS > 25
+  #error "DGUS_LCD_UI IA_CREALITY requires a mesh with no more than 25 points as defined by GRID_MAX_POINTS_X/Y."
 #endif
 
 #if ENABLED(G26_MESH_VALIDATION)
@@ -4116,8 +4109,10 @@ static_assert(_PLUS_TEST(3), "DEFAULT_MAX_ACCELERATION values must be positive."
       #error "SPINDLE_LASER_PWM_PIN conflicts with Z_STEP_PIN."
     #elif _PIN_CONFLICT(CASE_LIGHT)
       #error "SPINDLE_LASER_PWM_PIN conflicts with CASE_LIGHT_PIN."
-    //#elif _PIN_CONFLICT(E0_AUTO_FAN)
-    //  #error "SPINDLE_LASER_PWM_PIN conflicts with E0_AUTO_FAN_PIN."
+    #elif _PIN_CONFLICT(E0_AUTO_FAN)
+      #if DISABLED(E3S1PRO_RTS)
+        #error "SPINDLE_LASER_PWM_PIN conflicts with E0_AUTO_FAN_PIN."
+      #endif
     #elif _PIN_CONFLICT(E1_AUTO_FAN)
       #error "SPINDLE_LASER_PWM_PIN conflicts with E1_AUTO_FAN_PIN."
     #elif _PIN_CONFLICT(E2_AUTO_FAN)
@@ -4134,8 +4129,10 @@ static_assert(_PLUS_TEST(3), "DEFAULT_MAX_ACCELERATION values must be positive."
       #error "SPINDLE_LASER_PWM_PIN conflicts with E7_AUTO_FAN_PIN."
     #elif _PIN_CONFLICT(FAN0)
       #error "SPINDLE_LASER_PWM_PIN conflicts with FAN0_PIN."
-    //#elif _PIN_CONFLICT(FAN1)
-    //  #error "SPINDLE_LASER_PWM_PIN conflicts with FAN1_PIN."
+    #elif _PIN_CONFLICT(FAN1)
+      #if DISABLED(E3S1PRO_RTS)
+        #error "SPINDLE_LASER_PWM_PIN conflicts with FAN1_PIN."
+      #endif
     #elif _PIN_CONFLICT(FAN2)
       #error "SPINDLE_LASER_PWM_PIN conflicts with FAN2_PIN."
     #elif _PIN_CONFLICT(FAN3)

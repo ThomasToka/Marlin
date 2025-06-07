@@ -28,11 +28,6 @@
 #include "../../../feature/powerloss.h"
 #include "../../../module/motion.h"
 
-#if ENABLED(E3S1PRO_RTS)
-  #include "../../gcode.h"
-  #include "../../../module/printcounter.h"
-#endif
-
 #if HAS_PLR_BED_THRESHOLD
   #include "../../../module/temperature.h"  // for degBed
 #endif
@@ -44,6 +39,8 @@
   #include "../../../lcd/e3v2/creality/dwin.h"
 #elif ENABLED(E3S1PRO_RTS)
   #include "../../../lcd/rts/e3s1pro/lcd_rts.h"
+  #include "../../gcode.h"
+  #include "../../../module/printcounter.h"
 #elif ENABLED(DWIN_CREALITY_LCD_JYERSUI)
   #include "../../../lcd/e3v2/jyersui/dwin.h" // Temporary fix until it can be better implemented
 #endif
@@ -80,7 +77,6 @@ void GcodeSuite::M1000() {
 
     if (!force_resume && parser.seen_test('S')) {
       #if HAS_MARLINUI_MENU
-        SERIAL_ECHO_MSG("Marlinmenu: ");      
         ui.goto_screen(menu_job_recovery);
       #elif ENABLED(E3S1PRO_RTS)
         recovery.info.print_job_elapsed = print_job_timer.duration() + recovery.info.print_job_elapsed;    

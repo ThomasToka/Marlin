@@ -5,7 +5,6 @@
 //#include <arduino.h>
 #include "../../../libs/BL24CXX.h"
 #include "../../../inc/MarlinConfig.h"
-//#include "lcd_rts_defines.h"
 
 extern bool power_off_type_yes;
 
@@ -409,20 +408,21 @@ const uint16_t DGUS_VERSION = 0x000F;
 
 #define MESH_LEVELING_BLACK_TITLE_VP       0x156A
 #define ADVANCE_K_SET                      0x2214
+#define ADVANCE_TAU_SET                    0x2215
 #define HOTEND_X_ZOFFSET_VP                0x163A
 #define HOTEND_Y_ZOFFSET_VP                0x164A
 
 #define ADVANCE_K_TITLE_VP                 0x165A
-//#define Y_MIN_POS_EEPROM_VP                0x166A
+
 // prepare for hotend_fan
 //#define HOTEND_FAN_SPEED_DATA_VP         0x167A
-//#define Y_MIN_POS_VP                       0x168A
+//#define Y_MIN_POS_VP                     0x168A
 
-//#define X_BEDSIZE_VP                       0x169A
-//#define Y_BEDSIZE_VP                       0x170A 
+//#define X_BEDSIZE_VP                     0x169A
+//#define Y_BEDSIZE_VP                     0x170A 
 
-//#define HOME_X_OFFSET_NEW_VP               0x171A
-//#define HOME_Y_OFFSET_NEW_VP               0x172A
+//#define HOME_X_OFFSET_NEW_VP             0x171A
+//#define HOME_Y_OFFSET_NEW_VP             0x172A
 
 #define SHAPING_X_FREQUENCY_VP             0x173A
 #define SHAPING_Y_FREQUENCY_VP             0x174A
@@ -545,7 +545,6 @@ extern CRec CardRecbuf;
 
 struct lcd_rts_settings_t { // use bit fields to save space, max 48 bytes
 size_t settings_size;
-uint8_t settings_version;
 bool display_sound;
 int16_t display_volume;
 uint8_t screen_brightness;
@@ -560,7 +559,6 @@ bool external_m73;
 uint8_t total_probing;
 uint8_t plr_zraise;
 bool boot_zraise;
-//uint8_t hotend_fan;
 };
 
 static constexpr size_t eeprom_data_size = sizeof(lcd_rts_settings_t);
@@ -712,8 +710,12 @@ typedef enum PROC_COM : int8_t {
    EditMeshpoint            = 92,
    CurrentMeshpoint         = 93,
    SetProbeCount            = 94,
+  #if ENABLED(SMOOTH_LIN_ADVANCE)
    SaveM503Settings         = 95,
-   HotendFanSpeedkey      = 96
+   Advance_TAU_Key          = 96
+  #else
+   SaveM503Settings         = 95
+  #endif
 } proc_command_t; 
 
 const unsigned long Addrbuf[] = 
@@ -779,7 +781,7 @@ const unsigned long Addrbuf[] =
     0x2203, //EngraveWarningKey
     0x2204,
     0x2205,
-    0x2206,
+    0x2206, // Lasermoveaxis
     0x2207,
   #endif  
    0x2209, //pidsetkey nozzle temp
@@ -816,7 +818,9 @@ const unsigned long Addrbuf[] =
    0x2220, // CurrentMeshpoint
    0x1162, // SetProbeCount
    0x166A, // SaveM503Settings
-   0x167A, // HotendFanSpeedKey
+   #if ENABLED(SMOOTH_LIN_ADVANCE)
+    0x2215, // Advance_TAU_Key
+   #endif
   0
 };
 

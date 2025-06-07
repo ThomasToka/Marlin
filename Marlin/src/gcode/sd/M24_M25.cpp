@@ -47,13 +47,12 @@
 
 #include "../../MarlinCore.h" // for startOrResumeJob
 
-#if ALL(E3S1PRO_RTS, HAS_CUTTER)
-  #include "../../feature/spindle_laser.h"
-#endif
-
 #if ENABLED(E3S1PRO_RTS)
   #include "../../lcd/rts/e3s1pro/lcd_rts.h"
   #include "../../module/planner.h"
+  #if ENABLED(E3S1PRO_RTS_LASER)
+    #include "../../feature/spindle_laser.h"
+  #endif  
 #endif
 
 /**
@@ -83,7 +82,7 @@ void GcodeSuite::M24() {
     }
   #endif
 
-  #if ALL(E3S1PRO_RTS, HAS_CUTTER)
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
     if(laser_device.is_laser_device())
     {
       laser_device.remove_card_before_is_printing = true;
@@ -133,7 +132,7 @@ void GcodeSuite::M25() {
 
     print_job_timer.pause();
 
-    #if ALL(E3S1PRO_RTS, HAS_CUTTER)
+    #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
       if(laser_device.is_laser_device()){
         laser_device.pause_before_position_x = current_position.x;
         laser_device.pause_before_position_y = current_position.y;

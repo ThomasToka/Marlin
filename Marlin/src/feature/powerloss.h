@@ -165,10 +165,7 @@ class PrintJobRecovery {
     #if HAS_PLR_UI_FLAG
       static bool ui_flag_resume;     //!< Flag the UI to show a dialog to Resume (M1000) or Cancel (M1000C)
     #endif
-
-    #if ENABLED(E3S1PRO_RTS)
-      static bool recovery_flag;
-    #endif
+    TERN_(E3S1PRO_RTS, static bool recovery_flag);
 
     static void init();
     static void prepare();

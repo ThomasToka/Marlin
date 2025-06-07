@@ -25,15 +25,6 @@
 
 #if HAS_EXTRUDERS
 
-void GcodeSuite::M221_report(const bool forReplay/*=true*/) {
-  report_heading_etc(forReplay, F(STR_FLOW_RATE));
-  #if HAS_MULTI_EXTRUDER
-    EXTRUDER_LOOP() SERIAL_ECHOLNPGM("  M221 T", e, " S", planner.flow_percentage[e]);
-  #else
-    SERIAL_ECHOLNPGM("  M221 S", planner.flow_percentage[0]);
-  #endif
-}
-
 /**
  * M221: Set extrusion percentage (M221 T0 S95)
  */

@@ -4,16 +4,7 @@
  * This class is backward compatible to the stock screen firmware with its stock features.
  */
 
-//#define GCODE_PREVIEW_ENABLED
-
-//#define LCD_RTS_DEBUG_LCD
 //#define LCD_RTS_DEBUG_EEPROM_SETTINGS
-//#define LCD_RTS_DEBUG_SETTINGS
-//#define LCD_RTS_DEBUG_MARGIN_X
-//#define LCD_RTS_DEBUG_MARGIN_Y
-//#define LCD_RTS_DEBUG_SDCARD
-//#define LCD_RTS_DEBUG_PRINTTIME
-//#define LCD_RTS_DEBUG_LEVELING
 
 #include <WString.h>
 #include <stdio.h>
@@ -39,7 +30,7 @@
 #include "../../../gcode/gcode.h"
 #include "../../../module/probe.h"
 
-#if ENABLED(GCODE_PREVIEW_ENABLED)
+#if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)
   #include "preview.h"
 #endif
 
@@ -76,8 +67,8 @@
   #include "../../../feature/powerloss.h"
 #endif
 
-#if HAS_CUTTER
-#include "../../../feature/spindle_laser.h"
+#if ENABLED(LASER_FEATURE)
+  #include "../../../feature/spindle_laser.h"
 #endif
 
 #ifdef LCD_SERIAL_PORT
@@ -154,7 +145,6 @@ unsigned int picFilament_g = 0;
 float picLayerHeight = 0.0f;
 
 millis_t next_rts_update_ms      = 0;
-int PrintFlag = 0;
 
 float ChangeFilamentTemp = 200; 
 int heatway = 0;
@@ -205,7 +195,7 @@ float FilamentLOAD = 10;
 float FilamentUnLOAD = 10;
 
 unsigned char AxisUnitMode;
-unsigned char AutoHomeIconNum;
+
 float axis_unit = 10.0;
 int Update_Time_Value = 0;
 bool PoweroffContinue = false;
@@ -249,34 +239,24 @@ uint8_t  last_progress_percent = 0;
 uint32_t last_start_time       = 0;
 uint32_t last_remaining_time   = 0;
 
-bool g_heaterLoadTempAdd = false;
-bool g_uiXYAxisEnable = false;
-bool g_uiZAxisEnable = false;
-bool g_uiZOffsetHomeOkFlag = false;
 bool g_uiAutoPIDFlag =false;
 int16_t g_autoPIDHeaterTempTarget = 300;
-
 #if ENABLED(ENDER_3S1_PRO)
 int16_t g_autoPIDHotBedTempTarget = 110;
 #elif ENABLED(ENDER_3S1_PLUS)
 int16_t g_autoPIDHotBedTempTarget = 100;
 #endif
-
 int8_t g_autoPIDHeaterCycles = 8;
 int8_t g_autoPIDHotBedCycles = 8;
-
 int16_t g_autoPIDHeaterTempTargetset = 0;
 int16_t g_autoPIDHotBedTempTargetset = 0;
 int8_t g_autoPIDHeaterCyclesTargetset = 0;
 int8_t g_autoPIDHotBedCyclesTargetset = 0;
-
 bool g_uiAutoPIDHotbedRunningFlag = false;
 bool g_uiAutoPIDNozzleRunningFlag = false;
 int8_t g_uiAutoPIDRunningDiff = 0;
 int16_t g_uiCurveDataCnt = 0;
 
-int16_t advance_k_set = 0;
-uint8_t lcd_rts_settings_version = 1;
 lcd_rts_settings_t lcd_rts_settings;
 
 /*************************************END***************************************/
@@ -291,7 +271,6 @@ inline void RTS_line_to_current(AxisEnum axis)
 
 void resetSettings() {
   lcd_rts_settings.settings_size         = sizeof(lcd_rts_settings_t);
-  lcd_rts_settings.settings_version      = lcd_rts_settings_version;
   lcd_rts_settings.display_sound         = true;
   lcd_rts_settings.display_volume        = 256;
   lcd_rts_settings.display_standby       = true;
@@ -307,9 +286,6 @@ void resetSettings() {
   lcd_rts_settings.plr_zraise = 5;
   lcd_rts_settings.boot_zraise = true;
   //lcd_rts_settings.hotend_fan = 255;  
-  #if ENABLED(LCD_RTS_DEBUG_EEPROM_SETTINGS)
-    SERIAL_ECHOLNPGM("------Reset lcd_rts_settings from lcd_rts.cpp!-------");  
-  #endif
 }
 
 void loadSettings(const char * const buff) {
@@ -317,7 +293,6 @@ void loadSettings(const char * const buff) {
   #if ENABLED(LCD_RTS_DEBUG_EEPROM_SETTINGS)  
     SERIAL_ECHOLNPGM("Saved settings: ");
     SERIAL_ECHOLNPGM("settings_size: ", lcd_rts_settings.settings_size);
-    SERIAL_ECHOLNPGM("settings_version: ", lcd_rts_settings.settings_version);
     SERIAL_ECHOLNPGM("display_sound: ", lcd_rts_settings.display_sound);
     SERIAL_ECHOLNPGM("display_volume: ", lcd_rts_settings.display_volume);
     SERIAL_ECHOLNPGM("screen_brightness: ", lcd_rts_settings.screen_brightness);
@@ -343,7 +318,6 @@ void saveSettings(char * const buff) {
   #if ENABLED(LCD_RTS_DEBUG_EEPROM_SETTINGS)  
     SERIAL_ECHOLNPGM("Saved settings: ");
     SERIAL_ECHOLNPGM("settings_size: ", lcd_rts_settings.settings_size);
-    SERIAL_ECHOLNPGM("settings_version: ", lcd_rts_settings.settings_version);
     SERIAL_ECHOLNPGM("display_sound: ", lcd_rts_settings.display_sound);
     SERIAL_ECHOLNPGM("display_volume: ", lcd_rts_settings.display_volume);
     SERIAL_ECHOLNPGM("screen_brightness: ", lcd_rts_settings.screen_brightness);
@@ -399,9 +373,6 @@ static void RTS_line_to_filelist() {
   int num = 0;
   for (int16_t i = (file_current_page - 1) * 5; i < (file_current_page * 5); i++) {  
       card.selectFileByIndexSorted(i);
-      #if ENABLED(LCD_RTS_DEBUG_SDCARD)    
-          SERIAL_ECHO_MSG("card.longFilename ", card.longFilename);
-      #endif
       char *pointFilename = card.longFilename;
       int filenamelen = strlen(card.longFilename);
       //CardRecbuf.filenamelen[num] = strlen(card.longFilename);      
@@ -437,20 +408,8 @@ static void RTS_line_to_filelist() {
         rtscheck.RTS_SndData((unsigned long)0xFFFF, FilenameNature + (num + 1) * 16);
         rtscheck.RTS_SndData(204, FILE6_SELECT_ICON_VP + num);
       }
-      // Debugging
-      #if ENABLED(LCD_RTS_DEBUG_SDCARD)
-        SERIAL_ECHO_MSG("Filename after truncation: ", card.longFilename);
-        SERIAL_ECHO_MSG("j value: ", j);
-      #endif
-
       strncpy(CardRecbuf.Cardshowfilename[num], card.longFilename, min(j, TEXTBYTELEN));
       CardRecbuf.Cardshowfilename[num][TEXTBYTELEN - 1] = '\0';
-
-      #if ENABLED(LCD_RTS_DEBUG_SDCARD)
-          SERIAL_ECHO("inside rts_line_to_filelist");
-          SERIAL_ECHOLN("");
-      #endif
-
       strcpy(CardRecbuf.Cardfilename[num], card.filename);
       CardRecbuf.addr[num] = FILE1_TEXT_VP + (num * 60);
       rtscheck.RTS_SndData(CardRecbuf.Cardshowfilename[num], CardRecbuf.addr[num]);
@@ -510,7 +469,7 @@ void RTSSHOW::RTS_SDCardInit(void) {
 
     // clean print file
     RTS_CleanPrintAndSelectFile();
-    lcd_sd_status = IS_SD_INSERTED();
+    lcd_sd_status = card.isSDCardInserted();
   }
   else {
     if (PoweroffContinue) return;
@@ -529,7 +488,7 @@ bool RTSSHOW::RTS_SD_Detected() {
   static bool flag_stable;
   static uint32_t stable_point_time;
 
-  bool tmp = IS_SD_INSERTED();
+  bool tmp = card.isSDCardInserted();
 
   if (tmp != last)
     flag_stable = false;
@@ -716,7 +675,7 @@ void RTSSHOW::RTS_Init(void)
   if(lcd_rts_settings.boot_zraise){
     queue.enqueue_now_P(PSTR("M402"));
   }
-  #if ENABLED(GCODE_PREVIEW_ENABLED)
+  #if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)
     RTS_ResetSingleVP(DEFAULT_PRINT_MODEL_VP);
     RTS_ResetSingleVP(DOWNLOAD_PREVIEW_VP);
   #endif
@@ -1151,9 +1110,6 @@ void RTSSHOW::RTS_HandleData(void)
     recdat.head[1] = FHTWO;
     return;
   }
-  #if ENABLED(LCD_RTS_DEBUG_LCD)
-    SERIAL_ECHO_MSG("\nCheckkey=", Checkkey, "recdat.data[0]=", recdat.data[0]);
-  #endif
   switch(Checkkey)
   {
     //SERIAL_ECHO_MSG("Recorded value Catchall\n", Checkkey);            
@@ -1187,7 +1143,7 @@ void RTSSHOW::RTS_HandleData(void)
         file_current_page = 1;
         RTS_SndData(file_current_page, PAGE_STATUS_TEXT_CURRENT_VP);
 
-        if (IS_SD_INSERTED()) RTS_line_to_filelist();
+        if (card.isSDCardInserted()) RTS_line_to_filelist();
         RTS_ShowPage(2);
         }
         CardUpdate = false;
@@ -1227,7 +1183,7 @@ void RTSSHOW::RTS_HandleData(void)
         RTS_ShowPage(1);
         RTS_ShowPreviewImage(true);
       }
-      else if (recdat.data[0] == 6) { // Start bedleveling
+      else if (recdat.data[0] == 6) { // Start bedleveling // obsolete
         waitway = 3;
         RTS_SetOneToVP(AUTO_BED_LEVEL_TITLE_VP);
         RTS_SndData(AUTO_BED_LEVEL_PREHEAT, AUTO_BED_PREHEAT_HEAD_DATA_VP);
@@ -1265,7 +1221,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if (recdat.data[0] == 8) {
         RTS_ShowPage(1);
-        #if ENABLED(GCODE_PREVIEW_ENABLED)
+        #if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)
           if (false == CardRecbuf.selectFlag) {
             RTS_ShowPreviewImage(true);
           }        
@@ -1511,7 +1467,7 @@ void RTSSHOW::RTS_HandleData(void)
 
     case PausePrintKey:
       if(recdat.data[0] == 1)
-      {
+      { // Site 59
         if(printingIsActive() && (thermalManager.temp_hotend[0].celsius > (thermalManager.temp_hotend[0].target - 5)) && (thermalManager.temp_bed.celsius > (thermalManager.temp_bed.target - 3)))
         {
           RTS_SndData(runout.enabled ? 101 : 102, FILAMENT_CONTROL_ICON_VP);
@@ -1524,7 +1480,7 @@ void RTSSHOW::RTS_HandleData(void)
         }
       }
       else if(recdat.data[0] == 2)
-      {
+      { // Sites 11,62
         if(printingIsActive() && (thermalManager.temp_hotend[0].celsius > (thermalManager.temp_hotend[0].target - 5)) && (thermalManager.temp_bed.celsius > (thermalManager.temp_bed.target - 3)))
         {
         }
@@ -1544,7 +1500,7 @@ void RTSSHOW::RTS_HandleData(void)
 
       }
       else if(recdat.data[0] == 3)
-      {
+      { // Site 58
         if(printingIsActive())
         {
           RTS_LoadMainsiteIcons();
@@ -1560,7 +1516,7 @@ void RTSSHOW::RTS_HandleData(void)
     case ResumePrintKey:
       RTS_LoadMainsiteIcons();
       if(recdat.data[0] == 1)
-      {
+      { // Sites 13,61
         #if ENABLED(FILAMENT_RUNOUT_SENSOR)
           if ((1 == READ(FIL_RUNOUT_PIN)) && (runout.enabled == true))
           {
@@ -1589,7 +1545,7 @@ void RTSSHOW::RTS_HandleData(void)
           }
       }
       else if(recdat.data[0] == 2)
-      {
+      { // Site 7
         if(thermalManager.temp_hotend[0].target >= EXTRUDE_MINTEMP)
         {
           thermalManager.setTargetHotend(thermalManager.temp_hotend[0].target, 0);
@@ -1610,7 +1566,7 @@ void RTSSHOW::RTS_HandleData(void)
         #endif
       }
       else if(recdat.data[0] == 3)
-      {
+      { // Site 8
         #if ENABLED(FILAMENT_RUNOUT_SENSOR)
           if ((1 == READ(FIL_RUNOUT_PIN)) && (runout.enabled == true))
           {
@@ -1630,8 +1586,9 @@ void RTSSHOW::RTS_HandleData(void)
         sdcard_pause_check = true;
         RTS_SendM600Icon(true);
       }
-      else if (recdat.data[0] == 4) {
-        if (IS_SD_INSERTED()) { //有卡
+      else if (recdat.data[0] == 4) 
+      { // Site 47
+        if (card.isSDCardInserted()) { //有卡
           lcd_sd_status = true;
           card.startOrResumeFilePrinting();
           print_job_timer.start();
@@ -1716,9 +1673,6 @@ void RTSSHOW::RTS_HandleData(void)
       int max_reachable_pos_x = X_MAX_POS - custom_ceil(probe_offset_x_temp);
       int min_calc_margin_x = X_BED_SIZE - max_reachable_pos_x;
       min_calc_margin_x = fabs(min_calc_margin_x); // Ensure it's positive      
-      #if ENABLED(LCD_RTS_DEBUG_MARGIN_X)
-        SERIAL_ECHO_MSG("probe_margin_x old: ", lcd_rts_settings.probe_margin_x);
-      #endif
       if(min_calc_margin_x >= lcd_rts_settings.probe_margin_x){
       lcd_rts_settings.probe_margin_x= min_calc_margin_x;
       }
@@ -1726,10 +1680,6 @@ void RTSSHOW::RTS_HandleData(void)
         if(lcd_rts_settings.probe_margin_x <= 27){
           lcd_rts_settings.probe_margin_x = 27;
         }
-      #endif
-      #if ENABLED(LCD_RTS_DEBUG_MARGIN_X)
-        SERIAL_ECHO_MSG("min_calc_margin_x: ", min_calc_margin_x);
-        SERIAL_ECHO_MSG("probe_margin_x new: ", lcd_rts_settings.probe_margin_x);
       #endif
       RTS_SendLevelingSiteData(1);
       RTS_SndData(xprobe_xoffset * 100, HOTEND_X_ZOFFSET_VP);
@@ -1759,10 +1709,6 @@ void RTSSHOW::RTS_HandleData(void)
       int max_reachable_pos_y = Y_MAX_POS - custom_ceil(probe_offset_y_temp);
       int min_calc_margin_y = Y_BED_SIZE - max_reachable_pos_y;
       min_calc_margin_y = fabs(min_calc_margin_y); // Ensure it's positive
-      #if ENABLED(LCD_RTS_DEBUG_MARGIN_Y)
-        SERIAL_ECHO_MSG("Y probe_margin_y old: ", lcd_rts_settings.probe_margin_y_front);
-        SERIAL_ECHO_MSG("Y probe_min_margin_y old: ", lcd_rts_settings.probe_margin_y_back);
-      #endif
       if(min_calc_margin_y <= 10){
         min_calc_margin_y = 10;
       }
@@ -1777,12 +1723,6 @@ void RTSSHOW::RTS_HandleData(void)
         }
         RTS_SendLevelingSiteData(2);
       }
-
-      #if ENABLED(LCD_RTS_DEBUG_MARGIN_Y)
-          SERIAL_ECHO_MSG("Y probe_min_margin_y new: ", lcd_rts_settings.probe_margin_y_front);
-          SERIAL_ECHO_MSG("Y probe_min_margin_y new: ", lcd_rts_settings.probe_margin_y_back);
-      #endif
-           
       RTS_SndData(yprobe_yoffset * 100, HOTEND_Y_ZOFFSET_VP);
       hal.watchdog_refresh();
       break;
@@ -1920,15 +1860,9 @@ void RTSSHOW::RTS_HandleData(void)
     case HotBedTempEnterKey:
       if (false == g_uiAutoPIDFlag) {
         tempbed = recdat.data[0];
-        temp_bed_display=recdat.data[0];
-        #if ENABLED(BED_TEMP_COMP)
-            if (tempbed > 60 && tempbed <= 80)
-                tempbed += 5;
-            else if (tempbed > 80 && tempbed <= 120)
-                tempbed += 7;
-        #endif
+        temp_bed_display=recdat.data[0];        
         thermalManager.setTargetBed(tempbed);
-         RTS_SndData(temp_bed_display, BED_SET_TEMP_VP);
+        RTS_SndData(temp_bed_display, BED_SET_TEMP_VP);
       } else { // è‡ªåŠ¨PID
         if ((g_uiAutoPIDHotbedRunningFlag == true) || (recdat.data[0] < 60)) {
             RTS_SndData(g_autoPIDHotBedTempTargetset, BED_SET_TEMP_VP);
@@ -2407,16 +2341,12 @@ void RTSSHOW::RTS_HandleData(void)
         RTS_SendZoffsetFeedratePercentage(true);
       }    
       else if (recdat.data[0] == 163)
-      { // 00A3
+      { // 00A3 // Start Autoleveling // Site 81,94,95
         if(!printingIsActive() && leveling_running == 0){
           #if ENABLED(BLTOUCH)
             RTS_SndData(lang + 10, AUTO_LEVELING_START_TITLE_VP);
-            if(axes_should_home()){
-              waitway = 15;
-              RTS_G28MoveOne();
-            }else{
-              RTS_ChangeLevelingPage();
-            }
+            RTS_G28MoveOne();
+            RTS_ChangeLevelingPage();
             leveling_running = 1;
             RTS_ResetMesh();
             #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
@@ -2589,61 +2519,61 @@ void RTSSHOW::RTS_HandleData(void)
         }
       }
       else if(recdat.data[0] == 161)
-      { // 00A1
+      { // 00A1 // Probeoffset 10.0mm
         AxisUnitMode = 1;
         axis_unit = 10.0;
         RTS_ShowPage(86);
         RTS_SendMoveaxisUnitIcon(3);
       }
       else if(recdat.data[0] == 162)
-      { // 00A2
+      { // 00A2 // Probeoffset 1.0mm
         AxisUnitMode = 2;
         axis_unit = 1.0;
         RTS_ShowPage(87);
         RTS_SendMoveaxisUnitIcon(2);
       }
       else if(recdat.data[0] == 163)
-      { // 00A3
+      { // 00A3 // Probeoffset 0.1mm
         AxisUnitMode = 3;
         axis_unit = 0.1;
         RTS_ShowPage(88);
         RTS_SendMoveaxisUnitIcon(1);
       }
-      else if(recdat.data[0] == 164)
-      { // 00A4
+      else if (recdat.data[0] == 164)
+      { // 00A4 // doing home G28XY move from probeoffset site (unused!)
         waitway = 14;
         RTS_ShowPage(40);
         queue.enqueue_now_P(PSTR("G28 X Y"));
         Update_Time_Value = 0;
         RTS_ShowMotorFreeIcon(false);
       }
-      else if(recdat.data[0] == 165)
-      { // 00A5
+      else if (recdat.data[0] == 165)
+      { // 00A5 // doing home G28XYZ move from probeoffset site // Site 86,87,88
         waitway = 14;
         RTS_G28MoveNow();
       }
-      else if(recdat.data[0] == 166)
-      { // 00A6
+      else if (recdat.data[0] == 166)
+      { // 00A6 // doing home from Manual Tramming site // Site 25
         if(leveling_running == 0 && !planner.has_blocks_queued()) {
-        waitway = 16;
-        RTS_G28MoveNow();
-        }else{
-        RTS_ShowPage(25);         
+          waitway = 16;
+          RTS_G28MoveNow();
+        } else {
+          RTS_ShowPage(25);         
         }
         Update_Time_Value = 0;
       }
       else if(recdat.data[0] == 167)
-      { // 00A7
+      { // 00A7 // doing home from Cr Touch measuring // Site 89
         if (leveling_running == 0 && !planner.has_blocks_queued()) {
-        waitway = 17;
-        RTS_G28MoveNow();
-        }else{
-        RTS_ShowPage(89);
+          waitway = 17;
+          RTS_G28MoveNow();
+        } else {
+          RTS_ShowPage(89);
         }
         Update_Time_Value = 0;
       }
       else if(recdat.data[0] == 168)
-      { // 00A8 // 00A1 before Offsetrouting
+      { // 00A8
         RTS_ShowPage(92);
       }
       else if(recdat.data[0] == 169)
@@ -2677,12 +2607,12 @@ void RTSSHOW::RTS_HandleData(void)
         RTS_ShowPage(97);
       }
       else if(recdat.data[0] == 180)
-      { // 00A7
+      { // 00B4 // Home on assisted Tramming // Site 95
         if (leveling_running == 0 && !planner.has_blocks_queued()) {
-        waitway = 18;
-        RTS_G28MoveNow();
-        }else{
-        RTS_ShowPage(98);
+          waitway = 18;
+          RTS_G28MoveNow();
+        } else {
+          RTS_ShowPage(98);
         }
         Update_Time_Value = 0;
       }          
@@ -2945,7 +2875,7 @@ void RTSSHOW::RTS_HandleData(void)
           Update_Time_Value = 0;
           RTS_LoadMainsiteIcons();          
           RTS_ShowPage(10);
-          #if ENABLED(GCODE_PREVIEW_ENABLED)
+          #if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)
             RTS_ShowPreviewImage(false);
             int32_t ret = gcodePicDataSendToDwin(recovery.info.sd_filename,VP_OVERLAY_PIC_PTINT,PIC_FORMAT_JPG, PIC_RESOLUTION_250_250);
             if (ret == PIC_OK) {
@@ -2967,9 +2897,6 @@ void RTSSHOW::RTS_HandleData(void)
               }else{
                 rtscheck.RTS_SndData(CardRecbuf.Cardshowfilename[i], PRINT_FILE_TEXT_VP);
               }
-              #if ENABLED(LCD_RTS_DEBUG_SDCARD)
-                SERIAL_ECHO_MSG("CardRecbuf.Cardshowfilename[i]", CardRecbuf.Cardshowfilename[i]);
-              #endif
             }
           }
           queue.enqueue_now_P(PSTR("M1000"));
@@ -3062,6 +2989,9 @@ void RTSSHOW::RTS_HandleData(void)
       if(recdat.data[0] == 1)
       {
         RTS_SndData(planner.extruder_advance_K[0] * 1000, ADVANCE_K_SET);
+        #if ENABLED(SMOOTH_LIN_ADVANCE)
+          RTS_SndData(stepper.get_advance_tau() * 1000, ADVANCE_TAU_SET);
+        #endif
         RTS_ShowPage(34); 
       } 
       // RX
@@ -3377,33 +3307,43 @@ void RTSSHOW::RTS_HandleData(void)
     //  //thermalManager.set_fan_speed(0, hotend_fan_speed);
     //  break;
 
-    case AutopidSetNozzleTemp:       
+    case AutopidSetNozzleTemp:
       g_autoPIDHeaterTempTargetset = recdat.data[0];
       RTS_SndData(g_autoPIDHeaterTempTargetset, AUTO_PID_SET_NOZZLE_TEMP);
       break;
 
-    case AutopidSetNozzleCycles:          
+    case AutopidSetNozzleCycles:
       g_autoPIDHeaterCyclesTargetset = recdat.data[0];
       RTS_SndData(g_autoPIDHeaterCyclesTargetset, AUTO_PID_SET_NOZZLE_CYCLES);
       break;    
 
-    case AutopidSetHotbedTemp:       
+    case AutopidSetHotbedTemp:
       g_autoPIDHotBedTempTargetset = recdat.data[0];
       RTS_SndData(g_autoPIDHotBedTempTargetset, AUTO_PID_SET_HOTBED_TEMP);   
       break;
 
-    case AutopidSetHotbedCycles:      
+    case AutopidSetHotbedCycles:
       g_autoPIDHotBedCyclesTargetset = recdat.data[0];
       RTS_SndData(g_autoPIDHotBedCyclesTargetset, AUTO_PID_SET_HOTBED_CYCLES);           
       break;        
     
-    case Advance_K_Key:  
+    case Advance_K_Key:
       planner.extruder_advance_K[0] = ((float)recdat.data[0])/1000;
       RTS_SndData(planner.extruder_advance_K[0] * 1000, ADVANCE_K_SET);
       if(!printingIsActive()){
         settings.save();
-      }      
+      }
       break;
+    #if ENABLED(SMOOTH_LIN_ADVANCE)
+      case Advance_TAU_Key: {
+          stepper.set_advance_tau(((float)recdat.data[0]) / 1000.0f, 0);
+          RTS_SndData(stepper.get_advance_tau(0) * 1000, ADVANCE_TAU_SET);
+          if(!printingIsActive()){
+            settings.save();
+          }
+        break;
+      }
+    #endif
     case XShapingFreqsetEnterKey:
       stepper.set_shaping_frequency(X_AXIS, (float)recdat.data[0]/100);      
       RTS_SndData(stepper.get_shaping_frequency(X_AXIS) * 100, SHAPING_X_FREQUENCY_VP);
@@ -3620,7 +3560,7 @@ void RTSSHOW::RTS_HandleData(void)
           if (PoweroffContinue /*|| print_job_timer.isRunning()*/) return;
           // clean print file
           RTS_CleanPrintAndSelectFile();
-          lcd_sd_status = IS_SD_INSERTED();
+          lcd_sd_status = card.isSDCardInserted();
         }
         else {
           CardRecbuf.selectFlag = true;
@@ -3629,23 +3569,11 @@ void RTSSHOW::RTS_HandleData(void)
           delay(2);
           RTS_SndData((unsigned long)0xFFFF, FilenameNature + recdat.data[0] * 16);      
           RTS_ShowPage(1);
-          #if ENABLED(GCODE_PREVIEW_ENABLED)
+          #if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)
             char ret;
             RTS_ShowPreviewImage(false);
             ret = gcodePicDataSendToDwin(CardRecbuf.Cardfilename[CardRecbuf.recordcount],VP_OVERLAY_PIC_PTINT,PIC_FORMAT_JPG, PIC_RESOLUTION_250_250);
-            #if ENABLED(LCD_RTS_DEBUG_SDCARD)
-              SERIAL_ECHO_MSG("Loaded filename = ", CardRecbuf.Cardfilename[CardRecbuf.recordcount]);
-            #endif
             if (ret == PIC_OK) {
-              #if ENABLED(LCD_RTS_DEBUG_SDCARD)
-                SERIAL_ECHO_MSG("picLen lcd_rts = ", picLen);
-                SERIAL_ECHO_MSG("picStartLine lcd_rts = ", picStartLine);
-                SERIAL_ECHO_MSG("picEndLine lcd_rts = ", picEndLine);
-                SERIAL_ECHO_MSG("picFilament_m lcd_rts = ", picFilament_m);
-                SERIAL_ECHO_MSG("picFilament_g lcd_rts = ", picFilament_g);
-                SERIAL_ECHO_MSG("picLayerHeight lcd_rts = ", picLayerHeight);
-                SERIAL_ECHO_MSG("picLayers lcd_rts = ", picLayers);
-              #endif
               RTS_ResetPrintData(false);
               RTS_SendPrintData();
             } else {
@@ -3658,17 +3586,11 @@ void RTSSHOW::RTS_HandleData(void)
           rts_start_print = true;
           delay(5);
           if (CardRecbuf.filenamelen[CardRecbuf.recordcount] > 25){
-            #if ENABLED(LCD_RTS_DEBUG_SDCARD)
-              SERIAL_ECHO_MSG("CardRecbuf.filenamelen[CardRecbuf.recordcount] select", CardRecbuf.filenamelen[CardRecbuf.recordcount]);
-            #endif
             RTS_SndData(CardRecbuf.Cardshowfilename[CardRecbuf.recordcount], SELECT_FILE_TEXT_VP);
           }else{
-            #if ENABLED(LCD_RTS_DEBUG_SDCARD) 
-              SERIAL_ECHO_MSG("CardRecbuf.filenamelen[CardRecbuf.recordcount] print", CardRecbuf.filenamelen[CardRecbuf.recordcount]);
-            #endif
             RTS_SndData(CardRecbuf.Cardshowfilename[CardRecbuf.recordcount], PRINT_FILE_TEXT_VP);            
           }
-          #if ENABLED(GCODE_PREVIEW_ENABLED)          
+          #if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)          
             RefreshBrightnessAtPrint(0);
           #endif
         }
@@ -3680,9 +3602,6 @@ void RTSSHOW::RTS_HandleData(void)
         card.removeFile(settings_filename2);
         card.openFileWrite(settings_filename2);
         if (!card.isFileOpen()) {
-          #if ENABLED(LCD_RTS_DEBUG_SDCARD)
-            SERIAL_ECHO_MSG(F("Failed to open output file"));
-          #endif
           return;
         }
 
@@ -3796,9 +3715,18 @@ void RTSSHOW::RTS_HandleData(void)
                 snprintf(buffer, sizeof(buffer), " X%s Y%s Z%s", valueStr1, valueStr2, valueStr3);
                 card.write(buffer, strlen(buffer));
             } else if (i == 11) {
-                char valueStr[10];
+                #if ENABLED(SMOOTH_LIN_ADVANCE)
+                  char valueStr[10], tauStr[10];
+                #else
+                  char valueStr[10];
+                #endif
                 dtostrf(planner.extruder_advance_K[0], 1, 3, valueStr);
-                snprintf(buffer, sizeof(buffer), " K%s", valueStr);
+                #if ENABLED(SMOOTH_LIN_ADVANCE)
+                  dtostrf(stepper.get_advance_tau(0), 1, 3, tauStr);
+                  snprintf(buffer, sizeof(buffer), " K%s TAU%s", valueStr, tauStr);
+                #else
+                  snprintf(buffer, sizeof(buffer), " K%s", valueStr);
+                #endif
                 card.write(buffer, strlen(buffer));
             } else if (i == 12) {
                 char valueStr1[4]; // 4 characters to accommodate a 3-digit uint8_t and null terminator
@@ -3981,7 +3909,7 @@ void RTSSHOW::RTS_HandleData(void)
 
     case ChangePageKey:
       // represents to update file list
-      if (CardUpdate && lcd_sd_status && IS_SD_INSERTED()) {
+      if (CardUpdate && lcd_sd_status && card.isSDCardInserted()) {
         RTS_line_to_filelist();
         for (uint16_t i = 0; i < 5; i++) {
           delay(1);
@@ -3994,14 +3922,7 @@ void RTSSHOW::RTS_HandleData(void)
       RTS_SendProgress(card.percentDone());
       RTS_SendZoffsetFeedratePercentage(true);
       RTS_SndData(thermalManager.degTargetHotend(0), HEAD_SET_TEMP_VP);
-      #if ENABLED(BED_TEMP_COMP)
-        if (WITHIN(thermalManager.degTargetBed(), 66, 85))
-          RTS_SndData(thermalManager.degTargetBed() - 5, BED_SET_TEMP_VP);
-        else if (WITHIN(thermalManager.degTargetBed(), 86, 127))
-          RTS_SndData(thermalManager.degTargetBed() - 7, BED_SET_TEMP_VP);
-      #else
-        RTS_SndData(thermalManager.degTargetBed(), BED_SET_TEMP_VP);
-      #endif
+      RTS_SndData(thermalManager.degTargetBed(), BED_SET_TEMP_VP);
       languagedisplayUpdate();
       RTS_SndData(change_page_font + ExchangePageBase, ExchangepageAddr);
       break;   
@@ -4198,13 +4119,6 @@ void EachMomentUpdate(void)
           rtscheck.RTS_SndData((ui.get_remaining_time() % 3600) / 60, PRINT_REMAIN_TIME_MIN_VP);
           rtscheck.RTS_SndData((unsigned char) ui.get_progress_percent(), PRINT_PROCESS_ICON_VP);
           rtscheck.RTS_SndData((unsigned char) ui.get_progress_percent(), PRINT_PROCESS_VP);          
-          #if ENABLED(LCD_RTS_DEBUG_PRINTTIME)
-            SERIAL_ECHO_MSG("lcd_rts 1 PRINT_TIME_HOUR_VP: ", elapsed.value / 3600);
-            SERIAL_ECHO_MSG("lcd_rts 1 PRINT_TIME_MIN_VP: ", (elapsed.value % 3600));
-            SERIAL_ECHO_MSG("lcd_rts 1 PRINT_REMAIN_TIME_HOUR_VP: ", ui.get_remaining_time() / 3600);
-            SERIAL_ECHO_MSG("lcd_rts 1 PRINT_REMAIN_TIME_MIN_VP: ", (ui.get_remaining_time() % 3600));
-            SERIAL_ECHO_MSG("lcd_rts 1 ui.get_progress_percent(): ", ui.get_progress_percent());
-          #endif
         }
         // if printing and card.precentDone < 100
         // basically always while SD printing
@@ -4215,9 +4129,6 @@ void EachMomentUpdate(void)
             Percentrecord = card.percentDone();
             if(Percentrecord <= 100)
             {
-              #if ENABLED(LCD_RTS_DEBUG_PRINTTIME)
-                SERIAL_ECHO_MSG("(unsigned char)Percentrecord(): ", (unsigned char)Percentrecord);
-              #endif
               RTS_SendProgress((unsigned char)Percentrecord);
             }
           }
@@ -4225,9 +4136,6 @@ void EachMomentUpdate(void)
           {
             RTS_ResetSingleVP(PRINT_PROCESS_ICON_VP);
           }
-          #if ENABLED(LCD_RTS_DEBUG_PRINTTIME)
-            SERIAL_ECHO_MSG("(unsigned char)card.percentDone(): ", (unsigned char)card.percentDone());
-          #endif
           RTS_SendProgress((unsigned char)card.percentDone());
           last_cardpercentValue = card.percentDone();
           RTS_SendCurrentPosition(3);
@@ -4239,10 +4147,6 @@ void EachMomentUpdate(void)
           Percentrecord = card.percentDone();
           rtscheck.RTS_SndData(elapsed.value / 3600, PRINT_TIME_HOUR_VP);
           rtscheck.RTS_SndData((elapsed.value % 3600) / 60, PRINT_TIME_MIN_VP);
-          #if ENABLED(LCD_RTS_DEBUG_PRINTTIME)
-            SERIAL_ECHO_MSG("lcd_rts 2 PRINT_TIME_HOUR_VP: ", elapsed.value / 3600);
-            SERIAL_ECHO_MSG("lcd_rts 2 PRINT_TIME_MIN_VP: ", (elapsed.value % 3600));
-          #endif          
           if(Percentrecord<2)
           {
             RTS_ResetSingleVP(PRINT_REMAIN_TIME_HOUR_VP);
@@ -4254,19 +4158,10 @@ void EachMomentUpdate(void)
               if(_remain_time < 0) _remain_time = 0;
               rtscheck.RTS_SndData(_remain_time / 3600, PRINT_REMAIN_TIME_HOUR_VP);
               rtscheck.RTS_SndData((_remain_time % 3600) / 60, PRINT_REMAIN_TIME_MIN_VP);
-
-              #if ENABLED(LCD_RTS_DEBUG_PRINTTIME)
-                SERIAL_ECHO_MSG("lcd_rts 3 PRINT_REMAIN_TIME_HOUR_VP: ", _remain_time / 3600);
-                SERIAL_ECHO_MSG("lcd_rts 3 PRINT_REMAIN_TIME_MIN_VP: ", (_remain_time % 3600));
-              #endif
           }
         } else if ((ui.get_progress_percent() != last_progress_percent || ui.get_remaining_time() != last_remaining_time) && card.isPrinting() && !lcd_rts_settings.external_m73) {
           rtscheck.RTS_SndData(ui.get_remaining_time() / 3600, PRINT_REMAIN_TIME_HOUR_VP);
           rtscheck.RTS_SndData((ui.get_remaining_time() % 3600) / 60, PRINT_REMAIN_TIME_MIN_VP);
-          #if ENABLED(LCD_RTS_DEBUG_PRINTTIME)
-            SERIAL_ECHO_MSG("lcd_rts 4 PRINT_REMAIN_TIME_HOUR_VP: ", ui.get_remaining_time() / 3600);
-            SERIAL_ECHO_MSG("lcd_rts 4 PRINT_REMAIN_TIME_MIN_VP: ", (ui.get_remaining_time() % 3600));
-          #endif          
           rtscheck.RTS_SndData((unsigned char) ui.get_progress_percent(), PRINT_PROCESS_ICON_VP);
           rtscheck.RTS_SndData((unsigned char) ui.get_progress_percent(), PRINT_PROCESS_VP);
           if ((ui.get_remaining_time() > 0 && last_start_time == 0) || last_progress_percent > ui.get_progress_percent()) {
@@ -4276,10 +4171,6 @@ void EachMomentUpdate(void)
             uint32_t elapsed_seconds = (HAL_GetTick() - last_start_time) / 1000;
             rtscheck.RTS_SndData(elapsed_seconds / 3600, PRINT_TIME_HOUR_VP);
             rtscheck.RTS_SndData((elapsed_seconds % 3600) / 60, PRINT_TIME_MIN_VP);
-            #if ENABLED(LCD_RTS_DEBUG_PRINTTIME)
-              SERIAL_ECHO_MSG("lcd_rts 5 PRINT_TIME_HOUR_VP: ", elapsed_seconds / 3600);
-              SERIAL_ECHO_MSG("lcd_rts 5 PRINT_TIME_MIN_VP: ", (elapsed_seconds % 3600));
-            #endif            
           }
           last_progress_percent = ui.get_progress_percent();
           last_remaining_time = ui.get_remaining_time();
@@ -4507,8 +4398,8 @@ void RTS_Update(void)
   // Check the status of card
   rtscheck.RTS_SDCardUpdate();
 
-	sd_printing = IS_SD_PRINTING();
-	card_insert_st = IS_SD_INSERTED() ;
+	sd_printing = card.isStillPrinting();
+	card_insert_st = card.isSDCardInserted() ;
 	if(!card_insert_st && sd_printing){
 		RTS_ShowPage(47);   
 		RTS_ResetSingleVP(CHANGE_SDCARD_ICON_VP);
@@ -4868,7 +4759,7 @@ void RTS_ShowPage(uint8_t pageNumber)
 
 void RTS_ShowPreviewImage(bool status)
 {
-  #if ENABLED(GCODE_PREVIEW_ENABLED)
+  #if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)
     gcodePicDisplayOnOff(DEFAULT_PRINT_MODEL_VP, status);
   #endif
 }
@@ -5006,6 +4897,9 @@ void RTSSHOW::RTS_SendLoadedData(uint8_t loadpart)
     rtscheck.RTS_SndData(stepper.get_shaping_damping_ratio(X_AXIS) * 100, SHAPING_X_ZETA_VP);
     rtscheck.RTS_SndData(stepper.get_shaping_damping_ratio(Y_AXIS) * 100, SHAPING_Y_ZETA_VP);
     rtscheck.RTS_SndData(planner.extruder_advance_K[0] * 1000, ADVANCE_K_SET);  
+    #if ENABLED(SMOOTH_LIN_ADVANCE)
+      rtscheck.RTS_SndData(stepper.get_advance_tau() * 1000, ADVANCE_TAU_SET);
+    #endif
   }
   if(loadpart == 255 || loadpart == 6){   
     rtscheck.RTS_SndData(planner.flow_percentage[0], E0_SET_FLOW_VP);  
@@ -5035,8 +4929,8 @@ void RTS_G28MoveNow(void)
 
 void RTS_G28MoveOne(void)
 {
-  queue.enqueue_one_P(PSTR("G28"));
   RTS_ShowPage(40);
+  queue.enqueue_one_P(PSTR("G28R5"));
 }
 
 void RTS_TrammingPosition(uint8_t xx, uint8_t xy, uint8_t yx, uint8_t yy)
@@ -5156,10 +5050,6 @@ void RTS_SetProbeMarginX(uint8_t marginx, uint8_t m19load)
     }
   #endif
   lcd_rts_settings.probe_margin_x = marginx;
-  #if ENABLED(LCD_RTS_DEBUG_MARGIN_X)
-    SERIAL_ECHO_MSG("SetX min_calc_margin_x: ", min_calc_margin_x);
-    SERIAL_ECHO_MSG("SetX lcd_rts_settings.probe_margin_x: ", lcd_rts_settings.probe_margin_x);
-  #endif           
   RTS_SendLevelingSiteData(1);
   if (m19load == 0){    
     settings.save();
@@ -5194,11 +5084,6 @@ void RTS_SetProbeMarginY(uint8_t marginy, uint8_t m19load)
     lcd_rts_settings.probe_margin_y_front = marginy;
     lcd_rts_settings.probe_margin_y_back = marginy;
   }
-  #if ENABLED(LCD_RTS_DEBUG_MARGIN_Y)
-    SERIAL_ECHO_MSG("SetX min_calc_margin_y: ", min_calc_margin_y);
-    SERIAL_ECHO_MSG("SetX lcd_rts_settings.probe_margin_y_front: ", lcd_rts_settings.probe_margin_y_front);
-    SERIAL_ECHO_MSG("SetX lcd_rts_settings.probe_margin_y_back: ", lcd_rts_settings.probe_margin_y_back);
-  #endif    
   RTS_SendLevelingSiteData(2);
   if (m19load == 0){
     settings.save();

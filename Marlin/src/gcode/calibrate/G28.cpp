@@ -64,14 +64,12 @@
   #include "../../lcd/e3v2/creality/dwin.h"
 #elif ENABLED(SOVOL_SV06_RTS)
   #include "../../lcd/sovol_rts/sovol_rts.h"
+#elif ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
 
 #if ENABLED(LASER_FEATURE)
   #include "../../feature/spindle_laser.h"
-#endif
-
-#if ENABLED(E3S1PRO_RTS)
-  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
 
 #define DEBUG_OUT ENABLED(DEBUG_LEVELING_FEATURE)
@@ -149,11 +147,9 @@
      * Move the Z probe (or just the nozzle) to the safe homing point
      * (Z is already at the right height)
      */
-      
     #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
       TERN(E3S1PRO_RTS, , constexpr) xy_float_t safe_homing_xy = { Z_SAFE_HOMING_X_POINT, Z_SAFE_HOMING_Y_POINT };
     #endif
-
     #if ENABLED(AUTO_BED_LEVELING_UBL) 
       constexpr xy_float_t safe_homing_xy = { Z_SAFE_HOMING_X_POINT, Z_SAFE_HOMING_Y_POINT };
     #endif
@@ -599,8 +595,7 @@ void GcodeSuite::G28() {
   report_current_position();
 
   TERN_(FULL_REPORT_TO_HOST_FEATURE, set_and_report_grblstate(old_grblstate));
-
-  #if ALL(E3S1PRO_RTS, LASER_FEATURE)
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
     if(laser_device.is_laser_device()){
       do_blocking_move_to_xy(0, 10, homing_feedrate(X_AXIS));
       sync_plan_position();

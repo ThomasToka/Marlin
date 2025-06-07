@@ -168,13 +168,13 @@ public:
   /**
    * Correct power to configured range
    */
-  static cutter_power_t power_to_range(const cutter_power_t pwr, const uint8_t unitPwr=_CUTTER_POWER(CUTTER_POWER_UNIT)) {
+  static cutter_power_t power_to_range(const cutter_power_t pwr, const uint8_t pwrUnit=_CUTTER_POWER(CUTTER_POWER_UNIT)) {
     static constexpr float
       min_pct = TERN(CUTTER_POWER_RELATIVE, 0, TERN(SPINDLE_FEATURE, round(100.0f * (SPEED_POWER_MIN) / (SPEED_POWER_MAX)), SPEED_POWER_MIN)),
       max_pct = TERN(SPINDLE_FEATURE, 100, SPEED_POWER_MAX);
     if (pwr <= 0) return 0;
     cutter_power_t upwr;
-    switch (unitPwr) {
+    switch (pwrUnit) {
       case _CUTTER_POWER_PWM255: {  // PWM
         const uint8_t pmin = pct_to_ocr(min_pct), pmax = pct_to_ocr(max_pct);
         upwr = cutter_power_t(constrain(pwr, pmin, pmax));
@@ -345,7 +345,7 @@ public:
 
 extern SpindleLaser cutter;
 
-#if ALL(E3S1PRO_RTS, LASER_FEATURE)
+#if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
 
 enum device_header{
 	DEVICE_UNKNOWN=0xff, //unknow device
@@ -360,9 +360,6 @@ enum laser_device_range{
 	LASER_MAX_Y,
 };
 
-
-
-// #include "../HAL/STM32F1/timers.h"
 #include HAL_PATH(.., timers.h)
 
 class spindle_laser_soft_pwm
@@ -390,11 +387,11 @@ class spindle_laser_soft_pwm
     cutter.apply_power(0);
   }
 
-  void get_device_form_eeprom()
+  void get_device_from_eeprom()
   {
     uint8_t buff[2]={0};
     BL24CXX::read(LASER_FDM_ADDR, &buff[0], 1);
-    //SERIAL_ECHOLNPAIR("get_device_form_eeprom", buff[0]);
+    //SERIAL_ECHOLNPAIR("get_device_from_eeprom", buff[0]);
     if((device_header)buff[0]==DEVICE_LASER || (device_header)buff[0]==DEVICE_FDM){
       current_device = (device_header)buff[0];
     }else{
@@ -402,7 +399,7 @@ class spindle_laser_soft_pwm
     }
   }
 
-  double get_z_axis_high_form_eeprom()
+  double get_z_axis_high_from_eeprom()
   {    
     uint8_t buff[3]={0};
     uint16_t data=0;
@@ -542,4 +539,4 @@ extern class spindle_laser_soft_pwm laser_device;
 // void laser_power_stop(void);
 
 
-#endif //#if HAS_CUTTER
+#endif

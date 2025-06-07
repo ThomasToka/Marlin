@@ -64,7 +64,7 @@ typedef uvalue_t(SPEED_POWER_MAX) cutter_cpower_t;
   #define CUTTER_MENU_POWER_TYPE   uint16_5
   #define cutter_power2str         ui16tostr5rj
 #else
-  #if ENABLED(LASER_FEATURE)
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
     typedef uint16_t cutter_power_t;
   #else
     typedef uint8_t cutter_power_t;

@@ -84,17 +84,10 @@ void GcodeSuite::M73() {
             ? parser.value_float() * (PROGRESS_SCALE)
             : parser.value_byte()
           );
-          #if ENABLED(LCD_RTS_DEBUG_PRINTTIME)
-            SERIAL_ECHO_MSG("last_progress_percent M73: ", last_progress_percent);
-          #endif
           RTS_SendProgress(last_progress_percent);
           duration_t elapsed = print_job_timer.duration();
           rtscheck.RTS_SndData(elapsed.value / 3600, PRINT_TIME_HOUR_VP);
           rtscheck.RTS_SndData((elapsed.value % 3600) / 60, PRINT_TIME_MIN_VP);
-          #if ENABLED(LCD_RTS_DEBUG_PRINTTIME)
-            SERIAL_ECHO_MSG("M73 1 PRINT_TIME_HOUR_VP: ", elapsed.value / 3600);
-            SERIAL_ECHO_MSG("M73 1 PRINT_TIME_MIN_VP: ", (elapsed.value % 3600));
-          #endif              
         }
       }
     #endif
@@ -104,9 +97,6 @@ void GcodeSuite::M73() {
       if (parser.seenval('R')){
         if(!lcd_rts_settings.external_m73){
           ui.set_remaining_time(60 * parser.value_int());
-          #if ENABLED(LCD_RTS_DEBUG_PRINTTIME)
-            SERIAL_ECHO_MSG("M73 ui.set_remaining_time: ", 60 * parser.value_ulong());
-          #endif
         }
       }
       if(lcd_rts_settings.external_m73){ 
@@ -114,10 +104,6 @@ void GcodeSuite::M73() {
           last_remaining_time = 60 * parser.value_int();
           rtscheck.RTS_SndData(last_remaining_time / 3600, PRINT_REMAIN_TIME_HOUR_VP);
           rtscheck.RTS_SndData((last_remaining_time % 3600) / 60, PRINT_REMAIN_TIME_MIN_VP);
-          #if ENABLED(LCD_RTS_DEBUG_PRINTTIME)
-            SERIAL_ECHO_MSG("M73 3 PRINT_REMAIN_TIME_HOUR_VP: ", last_remaining_time / 3600);
-            SERIAL_ECHO_MSG("M73 3 PRINT_REMAIN_TIME_MIN_VP: ", (last_remaining_time % 3600));
-          #endif          
         }      
       }
     #endif

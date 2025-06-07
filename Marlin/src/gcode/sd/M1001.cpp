@@ -55,20 +55,17 @@
   #include "../../feature/host_actions.h"
 #endif
 
-#if ENABLED(E3S1PRO_RTS)
-  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
-#endif
-
-#if ALL(E3S1PRO_RTS, HAS_CUTTER)
-  #include "../../feature/spindle_laser.h"
-#endif
-
 #ifndef PE_LEDS_COMPLETED_TIME
   #define PE_LEDS_COMPLETED_TIME (30*60)
 #endif
 
 #if ENABLED(SOVOL_SV06_RTS)
   #include "../../lcd/sovol_rts/sovol_rts.h"
+#elif ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
+  #if ENABLED(E3S1PRO_RTS_LASER)
+    #include "../../feature/spindle_laser.h"
+  #endif
 #endif
 
 /**
@@ -113,7 +110,7 @@ void GcodeSuite::M1001() {
     }
   #endif
 
-  #if ALL(E3S1PRO_RTS, HAS_CUTTER)
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
     if(laser_device.is_laser_device())
     {
       #ifdef SD_FINISHED_RELEASECOMMAND_LASER
@@ -132,19 +129,16 @@ void GcodeSuite::M1001() {
   // Re-select the last printed file in the UI
   TERN_(SD_REPRINT_LAST_SELECTED_FILE, ui.reselect_last_file());
 
-
-  #if ALL(E3S1PRO_RTS, HAS_CUTTER)
-  if(laser_device.is_laser_device()){ 
-    RTS_ShowPage(60);
-  }
-  #endif
-
   #if ENABLED(SOVOL_SV06_RTS)
     rts.sendData(100, PRINT_PROCESS_VP); delay(1);
     rts.sendData(100, PRINT_PROCESS_ICON_VP); delay(1);
     rts.sendData(0, PRINT_SURPLUS_TIME_HOUR_VP); delay(1);
     rts.sendData(0, PRINT_SURPLUS_TIME_MIN_VP); delay(1);
     rts.gotoPage(ID_Finish_L, ID_Finish_D);
+  #elseif ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+    if (laser_device.is_laser_device()) { 
+      RTS_ShowPage(60);
+    }
   #endif
 }
 

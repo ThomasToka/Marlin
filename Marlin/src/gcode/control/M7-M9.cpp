@@ -39,7 +39,7 @@
 
 #if ANY(COOLANT_FLOOD, AIR_ASSIST)
 
-  #if ALL(E3S1PRO_RTS, HAS_CUTTER)
+  #if ENABLED(AIR_ASSIST)
     #include "../../feature/spindle_laser.h"
   #endif
 

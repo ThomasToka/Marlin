@@ -27,7 +27,6 @@
 #include "../gcode.h"
 #include "../../feature/spindle_laser.h"
 #include "../../module/planner.h"
-
 #if ENABLED(E3S1PRO_RTS)
   #include "../../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
@@ -94,17 +93,12 @@ void GcodeSuite::M3_M4(const bool is_M4) {
   #endif
 
   auto get_s_power = [] {
-    #if ENABLED(LASER_FEATURE)
-      float u = cutter.unitPower;
-    #else
-      float u = 0.0f;
-    #endif    
     if (parser.seenval('S')) {
       const float v = parser.value_float();
-      #if ENABLED(LASER_FEATURE)
-        u = laser_device.power16_to_8(v);
+      #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+        cutter.menuPower = cutter.unitPower = laser_device.power16_to_8(v);
       #else
-        u = cutter.menuPower = cutter.unitPower = TERN(LASER_POWER_TRAP, constrain( v, 0, CUTTER_POWER_MAX), cutter.power_to_range(v));
+        cutter.menuPower = cutter.unitPower = TERN(LASER_POWER_TRAP, constrain( v, 0, CUTTER_POWER_MAX), cutter.power_to_range(v));
       #endif
     }
     else if (parser.seenval('O')) { // pwr in PWM units
@@ -112,10 +106,10 @@ void GcodeSuite::M3_M4(const bool is_M4) {
       cutter.menuPower = cutter.unitPower = CUTTER_PWM_TO_SPWR(constrain(v, 0, 255));
     }
     else if (cutter.cutter_mode == CUTTER_MODE_STANDARD)
-      u = cutter.menuPower = cutter.unitPower = cutter.cpwr_to_upwr(SPEED_POWER_STARTUP);
+      cutter.menuPower = cutter.unitPower = cutter.cpwr_to_upwr(SPEED_POWER_STARTUP);
 
     // PWM not implied, power converted to OCR from unit definition and on/off if not PWM.
-    cutter.power = TERN(SPINDLE_LASER_USE_PWM, cutter.upower_to_ocr(u), u > 0 ? 255 : 0);
+    cutter.power = TERN(SPINDLE_LASER_USE_PWM, cutter.upower_to_ocr(cutter.unitPower), cutter.unitPower > 0 ? 255 : 0);
   };
 
   if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS || cutter.cutter_mode == CUTTER_MODE_DYNAMIC) {  // Laser power in inline mode

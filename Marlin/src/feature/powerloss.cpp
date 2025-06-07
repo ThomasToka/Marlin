@@ -26,10 +26,6 @@
 
 #include "../inc/MarlinConfigPre.h"
 
-#if ALL(E3S1PRO_RTS, HAS_CUTTER)
-  #include "../module/stepper.h"
-#endif
-
 #if ENABLED(POWER_LOSS_RECOVERY)
 
 #include "../inc/MarlinConfig.h"
@@ -57,11 +53,6 @@ uint32_t PrintJobRecovery::cmd_sdpos, // = 0
   bool PrintJobRecovery::ui_flag_resume; // = false
 #endif
 
-#if ENABLED(E3S1PRO_RTS)
-  bool PrintJobRecovery::recovery_flag; // = false
-  #include "../lcd/rts/e3s1pro/lcd_rts.h"
-#endif
-
 #include "../sd/cardreader.h"
 #include "../lcd/marlinui.h"
 #include "../gcode/queue.h"
@@ -77,6 +68,13 @@ uint32_t PrintJobRecovery::cmd_sdpos, // = 0
 
 #if ENABLED(SOVOL_SV06_RTS)
   #include "../lcd/sovol_rts/sovol_rts.h"
+#elif ENABLED(E3S1PRO_RTS)
+  bool PrintJobRecovery::recovery_flag; // = false
+  #include "../lcd/rts/e3s1pro/lcd_rts.h"
+  #if ENABLED(E3S1PRO_RTS_LASER)
+    #include "../module/stepper.h"
+    #include "../feature/spindle_laser.h"    
+  #endif  
 #endif
 
 #if ENABLED(FWRETRACT)
@@ -85,10 +83,6 @@ uint32_t PrintJobRecovery::cmd_sdpos, // = 0
 
 #define DEBUG_OUT ENABLED(DEBUG_POWER_LOSS_RECOVERY)
 #include "../core/debug_out.h"
-
-#if ALL(E3S1PRO_RTS, HAS_CUTTER)
-  #include "../feature/spindle_laser.h"
-#endif
 
 PrintJobRecovery recovery;
 
@@ -149,25 +143,19 @@ bool PrintJobRecovery::check() {
   //if (!card.isMounted()) card.mount();
   bool success = false;
   if (card.isMounted()) {
-
-    #ifdef EEPROM_PLR
-      BL24CXX::read(PLR_ADDR, (uint8_t*)&info, sizeof(info));
-    #else    
     load();
-    #endif
-
-		#if ALL(E3S1PRO_RTS, HAS_CUTTER)
-			  if(laser_device.is_laser_device()) {
-			  purge();
-		    } else
+    #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+      if(laser_device.is_laser_device()) {
+      purge();
+      } else
 		#endif  
-        {  
-          success = valid();
-          if (!success)
-            cancel();
-          else
-            queue.inject(F("M1000S"));
-        }
+      {  
+        success = valid();
+        if (!success)
+          cancel();
+        else
+          queue.inject(F("M1000S"));
+      }
   }
   return success;
 }
@@ -187,18 +175,9 @@ void PrintJobRecovery::load() {
   if (exists()) {
     open(true);
     (void)file.read(&info, sizeof(info));
-    resume_pos = info.current_position;
-    resume_sdpos = info.sdpos;
+    TERN_(E3S1PRO_RTS, resume_pos = info.current_position);
+    TERN_(E3S1PRO_RTS, resume_sdpos = info.sdpos);
     close();
-    #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-      SERIAL_ECHO_MSG("info.current_position.x load: ", info.current_position.x);
-      SERIAL_ECHO_MSG("info.current_position.y load: ", info.current_position.y);
-      SERIAL_ECHO_MSG("info.current_position.z load: ", info.current_position.z);
-      SERIAL_ECHO_MSG("info.zraise load: ", info.zraise);
-      SERIAL_ECHO_MSG("info.sdpos load: ", info.sdpos);
-      SERIAL_ECHO_MSG("Info raised load: ", info.flag.raised);
-      SERIAL_ECHO_MSG("current_position.z load: ", current_position.z);
-    #endif
   }
   debug(F("Load"));
 }
@@ -216,11 +195,10 @@ void PrintJobRecovery::prepare() {
  */
 void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=POWER_LOSS_ZRAISE*/, const bool raised/*=false*/) {
 
-  // We don't check isStillPrinting here so a save may occur during a pause
-
-  #if ALL(E3S1PRO_RTS, HAS_CUTTER)
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
     if(laser_device.is_laser_device()) return;
   #endif
+  // We don't check isStillPrinting here so a save may occur during a pause
 
   #if SAVE_INFO_INTERVAL_MS > 0
     static millis_t next_save_ms; // = 0
@@ -260,15 +238,6 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=POW
 
     info.zraise = zraise;
     info.flag.raised = raised;                      // Was Z raised before power-off?
-    #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-      SERIAL_ECHO_MSG("Info Zraise save: ", info.zraise);
-      SERIAL_ECHO_MSG("Info raised save: ", info.flag.raised);
-      SERIAL_ECHO_MSG("current_position.z save: ", current_position.z);
-      SERIAL_ECHO_MSG("info.current_position.x save: ", info.current_position.x);
-      SERIAL_ECHO_MSG("info.current_position.y save: ", info.current_position.y);
-      SERIAL_ECHO_MSG("info.current_position.z save: ", info.current_position.z);
-      SERIAL_ECHO_MSG("info.sdpos save: ", info.sdpos);
-    #endif
 
     TERN_(CANCEL_OBJECTS, info.cancel_state = cancelable.state);
     TERN_(GCODE_REPEAT_MARKERS, info.stored_repeat = repeat);
@@ -318,14 +287,7 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=POW
     info.flag.allow_cold_extrusion = TERN0(PREVENT_COLD_EXTRUSION, thermalManager.allow_cold_extrude);
 
     TERN_(E3S1PRO_RTS, recovery_flag = PoweroffContinue); 
-
-    #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-      SERIAL_ECHO_MSG("current_position.z prepare:", current_position.z);
-      SERIAL_ECHO_MSG("recovery_flag prepare:", recovery_flag);
-    #endif
-
     write();
-
   }
 }
 
@@ -383,14 +345,8 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=POW
     #if POWER_LOSS_ZRAISE
       // Get the limited Z-raise to do now or on resume
       const float zraise = _MAX(0, _MIN(current_position.z + POWER_LOSS_ZRAISE, Z_MAX_POS - 1) - current_position.z);
-      #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-        SERIAL_ECHO_MSG("#if POWER_LOSS_ZRAISE:", zraise);
-      #endif
     #else
       constexpr float zraise = 0;
-      #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-        SERIAL_ECHO_MSG("#else POWER_LOSS_ZRAISE:", zraise);
-      #endif
     #endif
 
     // Save the current position, distance that Z was (or should be) raised,
@@ -430,15 +386,7 @@ void PrintJobRecovery::write() {
 
   open(false);
   file.seekSet(0);
-  #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-    SERIAL_ECHO_MSG("Info raised write pre: ", info.flag.raised);
-    SERIAL_ECHO_MSG("current_position.z write pre:", current_position.z);
-  #endif
   const int16_t ret = file.write(&info, sizeof(info));
-  #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-    SERIAL_ECHO_MSG("Info raised write aft: ", info.flag.raised);
-    SERIAL_ECHO_MSG("current_position.z write aft:", current_position.z);
-  #endif
   if (ret == -1) DEBUG_ECHOLNPGM("Power-loss file write failed.");
   if (!file.close()) DEBUG_ECHOLNPGM("Power-loss file close failed.");
 }
@@ -505,19 +453,17 @@ void PrintJobRecovery::resume() {
     const float z_raised = z_print + info.zraise;
   #endif
 
-  DEBUG_ECHO_MSG(">>> z_print1: ", z_print, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
   //
   // Home the axes that can safely be homed, and
   // establish the current position as best we can.
   //
+
   PROCESS_SUBCOMMANDS_NOW(F("G92.9E0")); // Reset E to 0
 
   #if Z_HOME_TO_MAX
 
     float z_now = z_raised;
-    #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)    
-      SERIAL_ECHO_MSG("Z_HOME_TO_MAX: ", z_now);
-    #endif
+
     // If Z homing goes to max then just move back to the "raised" position
     PROCESS_SUBCOMMANDS_NOW(TS(
       F( "G28R0\n"    // Home all axes (no raise)
@@ -536,44 +482,34 @@ void PrintJobRecovery::resume() {
     #else
       float z_now = info.flag.raised ? z_raised : resume_pos.z;
     #endif
-    #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-      SERIAL_ECHO_MSG("info.flag.raised resume 2: ", info.flag.raised);
-      SERIAL_ECHO_MSG("z_raised resume 2: ", z_raised);
-      SERIAL_ECHO_MSG("z_print resume 2: ", z_print);
-      SERIAL_ECHO_MSG("z_now resume 2: ", z_now);
-    #endif
+
     #if !HOMING_Z_DOWN
       // Set Z to the real position
-      DEBUG_ECHO_MSG(">>> z_print2: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
       PROCESS_SUBCOMMANDS_NOW(TS(F("G92.9Z"), p_float_t(z_now, 3)));
-      DEBUG_ECHO_MSG(">>> z_print3: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
-      #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-        SERIAL_ECHO_MSG("z_now !HOMING_Z_DOWN: ", z_now);
-      #endif
     #endif
     #if DISABLED(E3S1PRO_RTS)
       // Does Z need to be raised now? It should be raised before homing XY.
       if (z_raised > z_now) {
         z_now = z_raised;
-        #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-          SERIAL_ECHO_MSG("inside need raise: ", z_now);
-        #endif
         PROCESS_SUBCOMMANDS_NOW(TS(F("G1F600Z"), p_float_t(z_now, 3)));
       }
     #endif
     // Home XY with no Z raise
-    DEBUG_ECHO_MSG(">>> z_print3a: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
-    PROCESS_SUBCOMMANDS_NOW(TS(F("G28R"), lcd_rts_settings.plr_zraise, F("XY"))); // No raise during G28
-    DEBUG_ECHO_MSG(">>> z_print3b: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);    
+    #if ENABLED(E3S1PRO_RTS)
+      PROCESS_SUBCOMMANDS_NOW(TS(F("G28R"), lcd_rts_settings.plr_zraise, F("XY"))); // No raise during G28
+    #else
+      PROCESS_SUBCOMMANDS_NOW(F("G28R0XY")); // No raise during G28
+    #endif
 
   #endif
 
   #if HOMING_Z_DOWN
     // Move to a safe XY position and home Z while avoiding the print.
     const xy_pos_t p = xy_pos_t(POWER_LOSS_ZHOME_POS) TERN_(HOMING_Z_WITH_PROBE, - probe.offset_xy);
-    PROCESS_SUBCOMMANDS_NOW(TS(F("G1F1000X"), p_float_t(p.x, 3), 'Y', p_float_t(p.y, 3), F("\nG28HL0Z")));
-    #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-      SERIAL_ECHO_MSG("if HOMING_Z_DOWN: ", z_now);
+    #if ENABLED(E3S1PRO_RTS)
+      PROCESS_SUBCOMMANDS_NOW(TS(F("G1F1000X"), p_float_t(p.x, 3), 'Y', p_float_t(p.y, 3), F("\nG28HL0Z")));
+    #else
+      PROCESS_SUBCOMMANDS_NOW(TS(F("G1F1000X"), p_float_t(p.x, 3), 'Y', p_float_t(p.y, 3), F("\nG28HZ")));
     #endif
   #endif
 
@@ -588,12 +524,7 @@ void PrintJobRecovery::resume() {
 
     #if !HOMING_Z_DOWN
       // The physical Z was adjusted at power-off so undo the M420S1 correction to Z with G92.9.
-      DEBUG_ECHO_MSG(">>> z_print4: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
-      PROCESS_SUBCOMMANDS_NOW(TS(F("G92.9Z"), p_float_t(z_now, 1)));
-      DEBUG_ECHO_MSG(">>> z_print5: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);      
-      #if ENABLED(DEBUG_POWER_LOSS_RECOVERY)
-        SERIAL_ECHO_MSG("if HAS_LEVELING: ", z_now);
-      #endif
+      PROCESS_SUBCOMMANDS_NOW(TS(F("G92.9Z"), p_float_t(z_now, 3)));
     #endif
   #endif
 
@@ -668,16 +599,18 @@ void PrintJobRecovery::resume() {
   #if ENABLED(NOZZLE_CLEAN_FEATURE)
     PROCESS_SUBCOMMANDS_NOW(F("G12"));
   #endif
-  DEBUG_ECHO_MSG(">>> z_print6: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
+
   // Move back over to the saved XY
   PROCESS_SUBCOMMANDS_NOW(TS(
     F("G1F3000X"), p_float_t(resume_pos.x, 3), 'Y', p_float_t(resume_pos.y, 3)
   ));
-  DEBUG_ECHO_MSG(">>> z_print7: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
-  // Move back down to the saved Z for printing
-  PROCESS_SUBCOMMANDS_NOW(TS(F("G1F600Z"), p_float_t(resume_pos.z, 3)));
 
-  DEBUG_ECHO_MSG(">>> z_print8: ", z_print, " z_now: ", z_now, " current_position.z: ", current_position.z, " info.current_position.z: ", info.current_position.z);
+  // Move back down to the saved Z for printing
+  #if ENABLED(E3S1PRO_RTS)
+    PROCESS_SUBCOMMANDS_NOW(TS(F("G1F600Z"), p_float_t(resume_pos.z, 3)));
+  #else
+    PROCESS_SUBCOMMANDS_NOW(TS(F("G1F600Z"), p_float_t(z_print, 3)));
+  #endif
 
   // Restore the feedrate and percentage
   PROCESS_SUBCOMMANDS_NOW(TS(F("G1F"), info.feedrate));
@@ -726,14 +659,7 @@ void PrintJobRecovery::resume() {
           DEBUG_ECHO(info.current_position[i]);
         }
         DEBUG_EOL();
-        #if ENABLED(E3S1PRO_RTS)
-          DEBUG_ECHOPGM("resume_pos: ");
-          LOOP_LOGICAL_AXES(i) {
-            if (i) DEBUG_CHAR(',');
-            DEBUG_ECHO(resume_pos[i]);
-          }   
-          DEBUG_EOL();
-        #endif
+
         DEBUG_ECHOLN(F("feedrate: "), info.feedrate, F(" x "), info.feedrate_percentage, '%');
         EXTRUDER_LOOP() DEBUG_ECHOLN('E', e + 1, F(" flow %: "), info.flow_percentage[e]);
 
@@ -829,7 +755,6 @@ void PrintJobRecovery::resume() {
 
         DEBUG_ECHOLNPGM("sd_filename: ", info.sd_filename);
         DEBUG_ECHOLNPGM("sdpos: ", info.sdpos);
-        DEBUG_ECHOLNPGM("resume_sdpos: ", resume_sdpos);
         DEBUG_ECHOLNPGM("print_job_elapsed: ", info.print_job_elapsed);
 
         DEBUG_ECHOPGM("axis_relative:");

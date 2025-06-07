@@ -50,24 +50,26 @@ bool leveling_is_valid() {
   return TERN1(HAS_MESH, bedlevel.mesh_is_valid());
 }
 
-unsigned long getColor(float value, float min_value, float max_value, float median) {
-    if (!bedlevel.mesh_is_valid()) {
-        return 0x0000; // Return white color
-    }
-    float greenRange = 0.08f; // Define the total green range width
-    float halfGreenRange = greenRange / 2.0f; // Half width for easier calculations
-    if (value < median - halfGreenRange - 0.05f) {
-        return 0x87FF; // light Blue
-    } else if (value < median - halfGreenRange) {
-        return 0x07F1; // light green tending  blue
-    } else if (value < median + halfGreenRange) {
-        return 0x07E0; // Green (covers the entire 0.08 range around median)
-    } else if (value < median + halfGreenRange + 0.05f) {
-        return 0x87E0; // light green tending red
-    } else {
-        return 0xFFE0; // yellow
-    }
-}
+#if ENABLED(E3S1PRO_RTS)
+  unsigned long getColor(float value, float min_value, float max_value, float median) {
+      if (!bedlevel.mesh_is_valid()) {
+          return 0x0000; // Return white color
+      }
+      float greenRange = 0.08f; // Define the total green range width
+      float halfGreenRange = greenRange / 2.0f; // Half width for easier calculations
+      if (value < median - halfGreenRange - 0.05f) {
+          return 0x87FF; // light Blue
+      } else if (value < median - halfGreenRange) {
+          return 0x07F1; // light green tending  blue
+      } else if (value < median + halfGreenRange) {
+          return 0x07E0; // Green (covers the entire 0.08 range around median)
+      } else if (value < median + halfGreenRange + 0.05f) {
+          return 0x87E0; // light green tending red
+      } else {
+          return 0xFFE0; // yellow
+      }
+  }
+#endif
 
 /**
  * Turn bed leveling on or off, correcting the current position.
@@ -150,16 +152,17 @@ void reset_bed_level() {
    *   buildroot/shared/scripts/MarlinMesh.scad
    */
   //#define SCAD_MESH_OUTPUT
-  #define PRINT_X print_x
-  #define PRINT_Y print_y
+
   /**
    * Print calibration results for plotting or manual frame adjustment.
    */
-  void print_2d_array(const uint8_t sx, const uint8_t sy, const uint8_t precision, const float *values, uint8_t print_x/*=0*/, uint8_t print_y/*=0*/) {
-    if (!print_x) PRINT_X = sx;
-    if (!print_y) PRINT_Y = sy;
+  void print_2d_array(const uint8_t sx, const uint8_t sy, const uint8_t precision, const float *values
+    #if ENABLED(DYNAMIC_LEVELING)
+      , uint8_t print_x/*=0*/, uint8_t print_y/*=0*/
+    #endif
+    ) {
     #ifndef SCAD_MESH_OUTPUT
-      for (uint8_t x = 0; x < PRINT_X; ++x) {
+      for (uint8_t x = 0; x < TERN(DYNAMIC_LEVELING, print_x, sx); ++x) {
         SERIAL_ECHO_SP(precision + (x < 10 ? 3 : 2));
         SERIAL_ECHO(x);
       }
@@ -168,14 +171,14 @@ void reset_bed_level() {
     #ifdef SCAD_MESH_OUTPUT
       SERIAL_ECHOLNPGM("measured_z = ["); // open 2D array
     #endif
-    for (uint8_t y = 0; y < PRINT_Y; ++y) {
+    for (uint8_t y = 0; y < TERN(DYNAMIC_LEVELING, print_y, sy); ++y) {
       #ifdef SCAD_MESH_OUTPUT
         SERIAL_ECHOPGM(" [");             // open sub-array
       #else
         if (y < 10) SERIAL_CHAR(' ');
         SERIAL_ECHO(y);
       #endif
-      for (uint8_t x = 0; x < PRINT_X; ++x) {
+      for (uint8_t x = 0; x < TERN(DYNAMIC_LEVELING, print_x, sx); ++x) {
         SERIAL_CHAR(' ');
         const float offset = values[x * sy + y];
         if (!isnan(offset)) {
@@ -193,12 +196,12 @@ void reset_bed_level() {
           #endif
         }
         #ifdef SCAD_MESH_OUTPUT
-          if (x < PRINT_X - 1) SERIAL_CHAR(',');
+          if (x < TERN(DYNAMIC_LEVELING, print_x, sx) - 1) SERIAL_CHAR(',');
         #endif
       }
       #ifdef SCAD_MESH_OUTPUT
         SERIAL_ECHOPGM(" ]");            // close sub-array
-        if (y < PRINT_Y - 1) SERIAL_CHAR(',');
+        if (y < TERN(DYNAMIC_LEVELING, print_y, sy) - 1) SERIAL_CHAR(',');
       #endif
       SERIAL_EOL();
     }

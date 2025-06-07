@@ -37,9 +37,7 @@
 
 #if ENABLED(SOVOL_SV06_RTS)
   #include "../../lcd/sovol_rts/sovol_rts.h"
-#endif
-
-#if ENABLED(E3S1PRO_RTS)
+#elif ENABLED(E3S1PRO_RTS)
   #include "../../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
 
