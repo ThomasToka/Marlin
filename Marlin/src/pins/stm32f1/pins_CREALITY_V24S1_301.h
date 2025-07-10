@@ -46,6 +46,8 @@
   #define DEFAULT_MACHINE_NAME "Ender-3 S1"
 #endif
 
+#define BOARD_LCD_SERIAL_PORT 2
+
 //
 // Servos
 //
