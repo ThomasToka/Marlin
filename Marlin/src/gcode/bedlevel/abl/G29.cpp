@@ -1057,7 +1057,7 @@ G29_TYPE GcodeSuite::G29() {
   #if ENABLED(E3S1PRO_RTS)
     queue.enqueue_one_P(PSTR("M500"));
     leveling_running = 0;
-    if (card.isStillPrinting()){
+    if (printingIsActive()){
       RTS_LoadMesh();
       delay(500);      
       RTS_ShowPage(10);

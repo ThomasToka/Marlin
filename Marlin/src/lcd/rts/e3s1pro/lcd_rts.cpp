@@ -8,7 +8,7 @@
 
 #include <WString.h>
 #include <stdio.h>
-#include <string.h>
+#include <cstring>
 //#include <Arduino.h>
 
 #include "../../../inc/MarlinConfig.h"
@@ -79,32 +79,32 @@
 
 #if ENABLED(E3S1PRO_RTS)
 RTSSHOW rtscheck;
-bool hasSelected = false;
+bool hasSelected;
 short previousSelectionIndex;
 extern CardReader card;
-char errorway = 0;
-char errornum = 0;
-char home_errornum  = 0; 
+char errorway;
+char errornum;
+char home_errornum; 
 
 #if ENABLED(BABYSTEPPING)
   float zprobe_zoffset;
   float xprobe_xoffset;
   float yprobe_yoffset;
-  float last_zoffset = 0.0;
-  float last_xoffset = 0.0;
-  float last_yoffset = 0.0;    
+  float last_zoffset;
+  float last_xoffset;
+  float last_yoffset;    
   float rec_zoffset;
 #endif
 
-uint8_t min_margin_y_back;
+uint8_t min_margin_b;
 uint8_t min_margin_x;
 
-bool power_off_type_yes = false;
-uint8_t bltouch_tramming = 0;
-uint8_t leveling_running = 0;
-uint8_t color_sp_offset = 0;
-uint8_t current_point = 255;
-int touchscreen_requested_mesh = 0;
+bool power_off_type_yes;
+uint8_t bltouch_tramming;
+uint8_t leveling_running;
+uint8_t color_sp_offset;
+uint8_t current_point;
+int touchscreen_requested_mesh;
 
 const float manual_feedrate_mm_m[] = {50 * 60, 50 * 60, 4 * 60, 180};
 constexpr float default_max_feedrate[]        = DEFAULT_MAX_FEEDRATE;
@@ -120,18 +120,18 @@ float default_hotbed_ptemp = DEFAULT_bedKp;
 float default_hotbed_itemp = DEFAULT_bedKi;
 float default_hotbed_dtemp = DEFAULT_bedKd;
 
-uint8_t startprogress = 0;
+uint8_t startprogress;
 
 CRec CardRecbuf; 
-int16_t temphot = 0;
-int8_t tempbed = 0;
-float temp_bed_display = 0;
-uint8_t afterprobe_fan0_speed = 0;
+int16_t temphot;
+int8_t tempbed;
+float temp_bed_display;
+uint8_t afterprobe_fan0_speed;
 
-bool sdcard_pause_check = true;
-bool pause_action_flag = false;
-bool print_preheat_check = false;
-bool probe_offset_flag = false;
+bool sdcard_pause_check;
+bool pause_action_flag ;
+bool print_preheat_check;
+bool probe_offset_flag;
 float probe_offset_x_temp;
 float probe_offset_y_temp;
 uint16_t max_reachable_pos_y;
@@ -139,79 +139,70 @@ uint16_t min_calc_margin_y_bedlevel;
 uint16_t max_reachable_pos_x;
 uint16_t min_calc_margin_x_bedlevel;
 
-int picLayers = 0;   // picture end line
-unsigned int picFilament_m = 0;
-unsigned int picFilament_g = 0;
-float picLayerHeight = 0.0f;
+int picLayers;   // picture end line
+unsigned int picFilament_m;
+unsigned int picFilament_g;
+float picLayerHeight;
 
-millis_t next_rts_update_ms      = 0;
+millis_t next_rts_update_ms;
 
-float ChangeFilamentTemp = 200; 
-int heatway = 0;
+float ChangeFilamentTemp ; 
+int heatway;
 
 int last_target_temperature[4] = {0};
 int last_target_temperature_bed;
 
-char waitway = 0;
+char waitway;
 
-int change_page_font = 1;
-unsigned char Percentrecord = 0;
-bool CardUpdate = false;  
+int change_page_font;
+unsigned char Percentrecord;
+bool CardUpdate;  
 
-int16_t fileCnt = 0;
-uint8_t file_current_page = 1;
-uint8_t file_total_page = 1;
-uint8_t page_total_file = 0;
+int16_t fileCnt;
+uint8_t file_current_page;
+uint8_t file_total_page;
+uint8_t page_total_file;
 
 DB RTSSHOW::recdat;
 DB RTSSHOW::snddat;
 
-uint8_t lang = 2; 
+uint8_t lang; 
 bool lcd_sd_status;
 
-float rec_dat_temp_last_x = 0.0;
-float rec_dat_temp_last_y = 0.0;
-float rec_dat_temp_real_x = 0.0;
-float rec_dat_temp_real_y = 0.0;
+float rec_dat_temp_last_x;
+float rec_dat_temp_last_y;
+float rec_dat_temp_real_x;
+float rec_dat_temp_real_y;
 
-uint16_t rectWidth = 0;
-uint16_t rectHeight = 0;
-uint16_t rect_0_y_top = 0;
-uint16_t rect_1_x_top_odd = 0;
-uint16_t rect_0_x_top_even = 0;
-uint16_t rect_x_offset = 0;
-uint16_t rect_y_offset = 0;
+uint16_t rectWidth, rectHeight, rect_0_y_top, rect_1_x_top_odd, rect_0_x_top_even, rect_x_offset, rect_y_offset;
 
-const float THRESHOLD_VALUE_X = 101.0;
-const size_t FIRST_ELEMENT_INDEX_X = 0;
+constexpr uint16_t THRESHOLD_VALUE_X = 101.0;
+constexpr uint8_t FIRST_ELEMENT_INDEX_X = 0;
 
-const float THRESHOLD_VALUE_Y = 101.0;
-const size_t FIRST_ELEMENT_INDEX_Y = 0;
+constexpr uint16_t THRESHOLD_VALUE_Y = 101.0;
+constexpr uint8_t FIRST_ELEMENT_INDEX_Y = 0;
 
-char cmdbuf[20] = {0};
+char cmdbuf[20];
 
-float FilamentLOAD = 10;
+float FilamentLOAD;
 
-float FilamentUnLOAD = 10;
+float FilamentUnLOAD;
 
-unsigned char AxisUnitMode;
-
-float axis_unit = 10.0;
-int Update_Time_Value = 0;
-bool PoweroffContinue = false;
+int Update_Time_Value;
+bool PoweroffContinue;
 char commandbuf[30];
 static bool last_card_insert_st;
 bool card_insert_st;
 bool sd_printing;
 
-bool home_flag = false;
-bool rts_start_print = false;  
+bool home_flag;
+bool rts_start_print;  
 
 const int manual_level_5position[9][2] = MANUALL_BED_LEVEING_5POSITION;
 const int manual_crtouch_5position[9][2] = MANUALL_BED_CRTOUCH_5POSITION;
 
-uint8_t settingsload = 0;
-const char* settings_filename2 = "SETTINGS.GCO";
+uint8_t settingsload;
+constexpr char settings_filename2[] = "SETTINGS.GCO";
 
 int custom_ceil(float x) {
     float decimal_part_x = x - static_cast<int>(x);
@@ -233,29 +224,28 @@ enum{
 int temp_preheat_nozzle = 0, temp_preheat_bed = 0, temp_probe_margin_x = 0, temp_probe_margin_y = 0;
 uint8_t temp_grid_max_points = 0;
 uint8_t temp_grid_probe_count = 0;
-uint8_t preheat_flag = PREHEAT_PLA; // 0=PLA，1=ABS, 2=PETG, 3=CUST
 
-uint8_t  last_progress_percent = 0;
-uint32_t last_start_time       = 0;
-uint32_t last_remaining_time   = 0;
+uint8_t  last_progress_percent;
+uint32_t last_start_time;
+uint32_t last_remaining_time;
 
-bool g_uiAutoPIDFlag =false;
-int16_t g_autoPIDHeaterTempTarget = 300;
+bool g_uiAutoPIDFlag;
+int16_t g_autoPIDHeaterTempTarget;
 #if ENABLED(ENDER_3S1_PRO)
-int16_t g_autoPIDHotBedTempTarget = 110;
+int16_t g_autoPIDHotBedTempTarget;
 #elif ENABLED(ENDER_3S1_PLUS)
-int16_t g_autoPIDHotBedTempTarget = 100;
+int16_t g_autoPIDHotBedTempTarget;
 #endif
-int8_t g_autoPIDHeaterCycles = 8;
-int8_t g_autoPIDHotBedCycles = 8;
-int16_t g_autoPIDHeaterTempTargetset = 0;
-int16_t g_autoPIDHotBedTempTargetset = 0;
-int8_t g_autoPIDHeaterCyclesTargetset = 0;
-int8_t g_autoPIDHotBedCyclesTargetset = 0;
-bool g_uiAutoPIDHotbedRunningFlag = false;
-bool g_uiAutoPIDNozzleRunningFlag = false;
-int8_t g_uiAutoPIDRunningDiff = 0;
-int16_t g_uiCurveDataCnt = 0;
+int8_t g_autoPIDHeaterCycles;
+int8_t g_autoPIDHotBedCycles;
+int16_t g_autoPIDHeaterTempTargetset;
+int16_t g_autoPIDHotBedTempTargetset;
+int8_t g_autoPIDHeaterCyclesTargetset;
+int8_t g_autoPIDHotBedCyclesTargetset;
+bool g_uiAutoPIDHotbedRunningFlag;
+bool g_uiAutoPIDNozzleRunningFlag;
+int8_t g_uiAutoPIDRunningDiff;
+int16_t g_uiCurveDataCnt;
 
 lcd_rts_settings_t lcd_rts_settings;
 
@@ -283,7 +273,6 @@ void resetSettings() {
   lcd_rts_settings.probe_margin_y_back = 45;
   lcd_rts_settings.external_m73 = false;
   lcd_rts_settings.total_probing = 5;
-  lcd_rts_settings.plr_zraise = 5;
   lcd_rts_settings.boot_zraise = true;
   //lcd_rts_settings.hotend_fan = 255;  
 }
@@ -306,7 +295,6 @@ void loadSettings(const char * const buff) {
     SERIAL_ECHOLNPGM("probe_min_margin y: ", lcd_rts_settings.probe_margin_y_back);
     SERIAL_ECHOLNPGM("external m73: ", lcd_rts_settings.external_m73);
     SERIAL_ECHOLNPGM("total_probing: ", lcd_rts_settings.total_probing);
-    SERIAL_ECHOLNPGM("plr_zraise: ", lcd_rts_settings.plr_zraise);
     SERIAL_ECHOLNPGM("boot_zraise: ", lcd_rts_settings.boot_zraise);
     //SERIAL_ECHOLNPGM("hotend_fan: ", lcd_rts_settings.hotend_fan);    
     SERIAL_ECHOLNPGM("------Load lcd_rts_settings from lcd_rts.cpp!-------");    
@@ -331,7 +319,6 @@ void saveSettings(char * const buff) {
     SERIAL_ECHOLNPGM("probe_min_margin y: ", lcd_rts_settings.probe_margin_y_back);
     SERIAL_ECHOLNPGM("external m73: ", lcd_rts_settings.external_m73);
     SERIAL_ECHOLNPGM("total_probing: ", lcd_rts_settings.total_probing);
-    SERIAL_ECHOLNPGM("plr_zraise: ", lcd_rts_settings.plr_zraise);
     SERIAL_ECHOLNPGM("boot_zraise: ", lcd_rts_settings.boot_zraise);
     //SERIAL_ECHOLNPGM("hotend_fan: ", lcd_rts_settings.hotend_fan);      
     SERIAL_ECHOLNPGM("------Save lcd_rts_settings from lcd_rts.cpp!-------");
@@ -438,12 +425,13 @@ static void RTS_line_to_filelist() {
 }
 
 void RTSSHOW::RTS_SDCardInit(void) {
-  if (RTS_SD_Detected())
+  if (RTS_SD_Detected()) {
+    delay(50);  // give card controller a bit of time to settle
     card.mount();
-
+  }
   //DEBUG_ECHOLNPGM(" card.flag.mounted=: ", card.flag.mounted);
-
   if (card.flag.mounted) {
+    delay(20); // let filesystem finish enumerating
     int16_t fileCnt = card.get_num_items();
     card.getWorkDirName();
     if (card.filename[0] != '/') card.cdup();
@@ -494,7 +482,7 @@ bool RTSSHOW::RTS_SD_Detected() {
     flag_stable = false;
   else if (!flag_stable) {
     flag_stable = true;
-    stable_point_time = millis() + 30;
+    stable_point_time = millis() + 100;
   }
 
   if (flag_stable && ELAPSED(millis(), stable_point_time))
@@ -653,8 +641,23 @@ void RTSSHOW::setTouchScreenConfiguration() {
 void RTSSHOW::RTS_Init(void)
 {
   delay(200);
-  AxisUnitMode = 1;
   lang = language_change_font;
+  // Defaults moved out of .data to save FLASH
+  ChangeFilamentTemp  = 200.0f;
+  FilamentLOAD        = 10.0f;
+  FilamentUnLOAD      = 10.0f;
+  //preheat_flag        = PREHEAT_PLA;
+  current_point       = 255;
+  sdcard_pause_check  = true;
+  change_page_font    = 1;
+  g_autoPIDHeaterTempTarget = 300;
+#if ENABLED(ENDER_3S1_PRO)
+  g_autoPIDHotBedTempTarget = 110;
+#elif ENABLED(ENDER_3S1_PLUS)
+  g_autoPIDHotBedTempTarget = 100;
+#endif
+  g_autoPIDHeaterCycles = 8;
+  g_autoPIDHotBedCycles = 8;
   delay(50);
   last_zoffset = zprobe_zoffset = probe.offset.z;
   touchscreen_requested_mesh = 0;
@@ -1149,9 +1152,6 @@ void RTSSHOW::RTS_HandleData(void)
         CardUpdate = false;
       }
       else if (recdat.data[0] == 2) {
-        AxisUnitMode = 1;
-        axis_unit = 10.0;
-
         if(axes_should_home()) {
           waitway = 4;
           RTS_G28MoveOne();
@@ -1161,6 +1161,14 @@ void RTSSHOW::RTS_HandleData(void)
         }
       }
       else if (recdat.data[0] == 3) {
+        RTS_SndData(ui.material_preset[0].hotend_temp, PREHEAT_PLA_SET_NOZZLE_TEMP_VP);
+        RTS_SndData(ui.material_preset[0].bed_temp, PREHEAT_PLA_SET_BED_TEMP_VP);
+        RTS_SndData(ui.material_preset[1].hotend_temp, PREHEAT_ABS_SET_NOZZLE_TEMP_VP);
+        RTS_SndData(ui.material_preset[1].bed_temp, PREHEAT_ABS_SET_BED_TEMP_VP);
+        RTS_SndData(ui.material_preset[2].hotend_temp, PREHEAT_PETG_SET_NOZZLE_TEMP_VP);
+        RTS_SndData(ui.material_preset[2].bed_temp, PREHEAT_PETG_SET_BED_TEMP_VP);
+        RTS_SndData(ui.material_preset[3].hotend_temp, PREHEAT_CUST_SET_NOZZLE_TEMP_VP);
+        RTS_SndData(ui.material_preset[3].bed_temp, PREHEAT_CUST_SET_BED_TEMP_VP);
         RTS_ShowPage(21);
       }
       else if (recdat.data[0] == 4) {     
@@ -1283,9 +1291,6 @@ void RTSSHOW::RTS_HandleData(void)
         }
       }
       else if (recdat.data[0] == 163) {
-        AxisUnitMode = 1;
-        axis_unit = 10.0;
-
         if(axes_should_home()) {
           waitway = 4;
           queue.enqueue_one_P(PSTR("G28"));
@@ -1617,7 +1622,7 @@ void RTSSHOW::RTS_HandleData(void)
         zprobe_zoffset = ((float)recdat.data[0]) / 100;
         zprobe_zoffset += 0.001;
       }
-      if(WITHIN((zprobe_zoffset), PROBE_OFFSET_ZMIN, PROBE_OFFSET_XMAX))
+      if(WITHIN((zprobe_zoffset), PROBE_OFFSET_ZMIN, PROBE_OFFSET_ZMAX))
       {
         babystep.add_mm(Z_AXIS, zprobe_zoffset - last_zoffset);
       }
@@ -1638,7 +1643,7 @@ void RTSSHOW::RTS_HandleData(void)
         zprobe_zoffset = ((float)recdat.data[0]) / 100;
         zprobe_zoffset += 0.001;
       }
-      if(WITHIN((zprobe_zoffset), PROBE_OFFSET_ZMIN, PROBE_OFFSET_XMAX))
+      if(WITHIN((zprobe_zoffset), PROBE_OFFSET_ZMIN, PROBE_OFFSET_ZMAX))
       {
         babystep.add_mm(Z_AXIS, zprobe_zoffset - last_zoffset);
       }
@@ -1672,9 +1677,9 @@ void RTSSHOW::RTS_HandleData(void)
       }
       int max_reachable_pos_x = X_MAX_POS - custom_ceil(probe_offset_x_temp);
       int min_calc_margin_x = X_BED_SIZE - max_reachable_pos_x;
-      min_calc_margin_x = fabs(min_calc_margin_x); // Ensure it's positive      
+      min_calc_margin_x = fabs(min_calc_margin_x); // Ensure it's positive
       if(min_calc_margin_x >= lcd_rts_settings.probe_margin_x){
-      lcd_rts_settings.probe_margin_x= min_calc_margin_x;
+        lcd_rts_settings.probe_margin_x = min_calc_margin_x;
       }
       #if ENABLED(ENDER_3S1_PLUS)
         if(lcd_rts_settings.probe_margin_x <= 27){
@@ -1728,7 +1733,7 @@ void RTSSHOW::RTS_HandleData(void)
       break;
     }
 
-    case TempControlKey:
+    case TempControlKey: // 
       if (!printingIsActive() && !planner.has_blocks_queued()) { 
         if(recdat.data[0] == 2)
         {
@@ -1736,7 +1741,8 @@ void RTSSHOW::RTS_HandleData(void)
         }
         else if(recdat.data[0] == 3)
         {
-          preheat_flag = PREHEAT_PLA;
+          //mark //obsolete
+          //preheat_flag = PREHEAT_PLA;
           temp_preheat_nozzle = ui.material_preset[0].hotend_temp;
           temp_preheat_bed = ui.material_preset[0].bed_temp;
           RTS_SndData(ui.material_preset[0].hotend_temp, PREHEAT_PLA_SET_NOZZLE_TEMP_VP);
@@ -1745,8 +1751,8 @@ void RTSSHOW::RTS_HandleData(void)
           RTS_ShowPage(22);
         }
         else if(recdat.data[0] == 4)
-        {
-          preheat_flag = PREHEAT_ABS;
+        { // obsolete
+          //preheat_flag = PREHEAT_ABS;
           temp_preheat_nozzle = ui.material_preset[1].hotend_temp;
           temp_preheat_bed = ui.material_preset[1].bed_temp;
           RTS_SndData(ui.material_preset[1].hotend_temp, PREHEAT_ABS_SET_NOZZLE_TEMP_VP);
@@ -1777,8 +1783,8 @@ void RTSSHOW::RTS_HandleData(void)
           RTS_ShowPage(20);
         }
         else if(recdat.data[0] == 161)
-        {
-          preheat_flag = PREHEAT_PETG;
+        { // obsolete
+          //preheat_flag = PREHEAT_PETG;
           temp_preheat_nozzle = ui.material_preset[2].hotend_temp;
           temp_preheat_bed = ui.material_preset[2].bed_temp;
           RTS_SndData(ui.material_preset[2].hotend_temp, PREHEAT_PETG_SET_NOZZLE_TEMP_VP);
@@ -1787,8 +1793,8 @@ void RTSSHOW::RTS_HandleData(void)
           RTS_ShowPage(90);
         }
         else if(recdat.data[0] == 162)
-        {
-          preheat_flag = PREHEAT_CUST;
+        { // obsolete
+          //preheat_flag = PREHEAT_CUST;
           temp_preheat_nozzle = ui.material_preset[3].hotend_temp;
           temp_preheat_bed = ui.material_preset[3].bed_temp;
           RTS_SndData(ui.material_preset[3].hotend_temp, PREHEAT_CUST_SET_NOZZLE_TEMP_VP);
@@ -1822,7 +1828,7 @@ void RTSSHOW::RTS_HandleData(void)
           thermalManager.fan_speed[0] = 255;
         }
         else if(recdat.data[0] == 2)
-        {
+        { // obsolete maybe. back from preheat pages to 21_temp
           RTS_ShowPage(21);
         } else if (recdat.data[0] == 3) {
           settings.save();
@@ -1880,7 +1886,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 2)
       {
-        // Adv.set       
+        // to adv.set / reset no site 43
         if(g_uiAutoPIDNozzleRunningFlag == true) break;          
         if(g_uiAutoPIDHotbedRunningFlag == true) break;        
         RTS_ShowPage(33);
@@ -1912,8 +1918,9 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 8)
       {
-        ui.material_preset[preheat_flag].hotend_temp = temp_preheat_nozzle;
-        ui.material_preset[preheat_flag].bed_temp = temp_preheat_bed;
+        //mark // obsolete
+        //ui.material_preset[preheat_flag].hotend_temp = temp_preheat_nozzle;
+        //ui.material_preset[preheat_flag].bed_temp = temp_preheat_bed;
 
         settings.save();
         RTS_ShowPage(21);
@@ -1928,7 +1935,7 @@ void RTSSHOW::RTS_HandleData(void)
         RTS_ShowPage(42);
       }
       else if(recdat.data[0] == 0xB)
-      {
+      { // reset from site 43
         RTS_ResetMesh();
         RTS_ResetSingleVP(MESH_POINT_MIN);
         RTS_ResetSingleVP(MESH_POINT_MAX);
@@ -1968,7 +1975,7 @@ void RTSSHOW::RTS_HandleData(void)
         RTS_ShowPage(25);
       }
       else if(recdat.data[0] == 0x11)
-      {
+      { // obsolete
         RTS_ShowPage(21);
       }
       break;
@@ -2107,7 +2114,7 @@ void RTSSHOW::RTS_HandleData(void)
             }
             if (bltouch_tramming == 1){
             // Cr-Touch measuring point 6
-            sprintf_P(cmd, "G30 X%d Y%d", lcd_rts_settings.probe_margin_x,lcd_rts_settings.probe_margin_y_front);
+            sprintf_P(cmd, "G30 X%d Y%d", lcd_rts_settings.probe_margin_x, lcd_rts_settings.probe_margin_y_front);
             queue.enqueue_now_P(cmd);
             RTS_ShowPage(89);                  
             }
@@ -2136,7 +2143,7 @@ void RTSSHOW::RTS_HandleData(void)
             }
             if (bltouch_tramming == 1){
             // Cr-Touch measuring point 7
-            sprintf_P(cmd, "G30 X%d Y%d", (X_BED_SIZE - lcd_rts_settings.probe_margin_x),lcd_rts_settings.probe_margin_y_front);
+            sprintf_P(cmd, "G30 X%d Y%d", (X_BED_SIZE - lcd_rts_settings.probe_margin_x), lcd_rts_settings.probe_margin_y_front);
             queue.enqueue_now_P(cmd);
             RTS_ShowPage(89);
             }
@@ -2479,25 +2486,16 @@ void RTSSHOW::RTS_HandleData(void)
       RTS_SndData(yprobe_yoffset * 100, HOTEND_Y_ZOFFSET_VP);    
       if(recdat.data[0] == 1)
       {
-        AxisUnitMode = 1;
-        axis_unit = 10.0;
         RTS_ShowPage(16);
-        RTS_SendMoveaxisUnitIcon(3);
       }
-      else if(recdat.data[0] == 2)
-      {
-        AxisUnitMode = 2;
-        axis_unit = 1.0;
-        RTS_ShowPage(17);
-        RTS_SendMoveaxisUnitIcon(2);
-      }
-      else if(recdat.data[0] == 3)
-      {
-        AxisUnitMode = 3;
-        axis_unit = 0.1;
-        RTS_ShowPage(18);
-        RTS_SendMoveaxisUnitIcon(1);
-      }
+      //else if(recdat.data[0] == 2)
+      //{ // obsolete
+      //  RTS_ShowPage(17);
+      //}
+      //else if(recdat.data[0] == 3)
+      //{ // obsolete
+      //  RTS_ShowPage(18);
+      //}
       else if(recdat.data[0] == 4)
       {
         waitway = 4;
@@ -2520,25 +2518,16 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 161)
       { // 00A1 // Probeoffset 10.0mm
-        AxisUnitMode = 1;
-        axis_unit = 10.0;
         RTS_ShowPage(86);
-        RTS_SendMoveaxisUnitIcon(3);
       }
-      else if(recdat.data[0] == 162)
-      { // 00A2 // Probeoffset 1.0mm
-        AxisUnitMode = 2;
-        axis_unit = 1.0;
-        RTS_ShowPage(87);
-        RTS_SendMoveaxisUnitIcon(2);
-      }
-      else if(recdat.data[0] == 163)
-      { // 00A3 // Probeoffset 0.1mm
-        AxisUnitMode = 3;
-        axis_unit = 0.1;
-        RTS_ShowPage(88);
-        RTS_SendMoveaxisUnitIcon(1);
-      }
+      //else if(recdat.data[0] == 162)
+      //{ // 00A2 // Probeoffset 1.0mm // obsolete
+      //  RTS_ShowPage(87);
+      //}
+      //else if(recdat.data[0] == 163)
+      //{ // 00A3 // Probeoffset 0.1mm // obsolete
+      //  RTS_ShowPage(88);
+      //}
       else if (recdat.data[0] == 164)
       { // 00A4 // doing home G28XY move from probeoffset site (unused!)
         waitway = 14;
@@ -2619,18 +2608,15 @@ void RTSSHOW::RTS_HandleData(void)
       break;
 
     case XaxismoveKey:
-      float x_min, x_max;
       waitway = 4;
-      x_min = 0;
-      x_max = X_MAX_POS;
       current_position[X_AXIS] = ((float)recdat.data[0]) / 10;
-      if(current_position[X_AXIS] < x_min)
+      if(current_position[X_AXIS] < 0)
       {
-        current_position[X_AXIS] = x_min;
+        current_position[X_AXIS] = 0;
       }
-      else if(current_position[X_AXIS] > x_max)
+      else if(current_position[X_AXIS] > X_MAX_POS)
       {
-        current_position[X_AXIS] = x_max;
+        current_position[X_AXIS] = X_MAX_POS;
       }
       RTS_line_to_current(X_AXIS);
       RTS_SendCurrentPosition(1);
@@ -2640,18 +2626,15 @@ void RTSSHOW::RTS_HandleData(void)
       break;
 
     case YaxismoveKey:
-      float y_min, y_max;
       waitway = 4;
-      y_min = 0;
-      y_max = Y_MAX_POS;
       current_position[Y_AXIS] = ((float)recdat.data[0]) / 10;
-      if(current_position[Y_AXIS] < y_min)
+      if(current_position[Y_AXIS] < 0)
       {
-        current_position[Y_AXIS] = y_min;
+        current_position[Y_AXIS] = 0;
       }
-      else if(current_position[Y_AXIS] > y_max)
+      else if(current_position[Y_AXIS] > Y_MAX_POS)
       {
-        current_position[Y_AXIS] = y_max;
+        current_position[Y_AXIS] = Y_MAX_POS;
       }
       RTS_line_to_current(Y_AXIS);
       RTS_SendCurrentPosition(2);
@@ -2661,18 +2644,15 @@ void RTSSHOW::RTS_HandleData(void)
       break;
 
     case ZaxismoveKey:
-      float z_min, z_max;
       waitway = 4;
-      z_min = Z_MIN_POS;
-      z_max = Z_MAX_POS;
       current_position[Z_AXIS] = ((float)recdat.data[0])/10;
-      if (current_position[Z_AXIS] < z_min)
+      if (current_position[Z_AXIS] < Z_MIN_POS)
       {
-        current_position[Z_AXIS] = z_min;
+        current_position[Z_AXIS] = Z_MIN_POS;
       }
-      else if (current_position[Z_AXIS] > z_max)
+      else if (current_position[Z_AXIS] > Z_MAX_POS)
       {
-        current_position[Z_AXIS] = z_max;
+        current_position[Z_AXIS] = Z_MAX_POS;
       }
       RTS_line_to_current(Z_AXIS);
       RTS_SendCurrentPosition(3);
@@ -2916,43 +2896,60 @@ void RTSSHOW::RTS_HandleData(void)
       break;
 
     case PLAHeadSetEnterKey:
+    //mark
       temp_preheat_nozzle = recdat.data[0];
       RTS_SndData(temp_preheat_nozzle, PREHEAT_PLA_SET_NOZZLE_TEMP_VP);
+      ui.material_preset[0].hotend_temp = temp_preheat_nozzle;
+      settings.save();
       break;
 
     case PLABedSetEnterKey:
       temp_preheat_bed = recdat.data[0];
-      RTS_SndData(temp_preheat_bed, PREHEAT_PLA_SET_BED_TEMP_VP);     
+      RTS_SndData(temp_preheat_bed, PREHEAT_PLA_SET_BED_TEMP_VP);
+      ui.material_preset[0].bed_temp = temp_preheat_bed;
+      settings.save();
       break;
 
     case ABSHeadSetEnterKey:
       temp_preheat_nozzle = recdat.data[0];
       RTS_SndData(temp_preheat_nozzle, PREHEAT_ABS_SET_NOZZLE_TEMP_VP);
+      ui.material_preset[1].hotend_temp = temp_preheat_nozzle;
+      settings.save();
       break;
 
     case ABSBedSetEnterKey:
       temp_preheat_bed = recdat.data[0];
       RTS_SndData(temp_preheat_bed, PREHEAT_ABS_SET_BED_TEMP_VP);
+      ui.material_preset[1].bed_temp = temp_preheat_bed;
+      settings.save();     
       break;
 
     case PETGHeadSetEnterKey:
       temp_preheat_nozzle = recdat.data[0];
       RTS_SndData(temp_preheat_nozzle, PREHEAT_PETG_SET_NOZZLE_TEMP_VP);
+      ui.material_preset[2].hotend_temp = temp_preheat_nozzle;
+      settings.save();
       break;
 
     case PETGBedSetEnterKey:
       temp_preheat_bed = recdat.data[0];
-      RTS_SndData(temp_preheat_bed, PREHEAT_PETG_SET_BED_TEMP_VP);     
+      RTS_SndData(temp_preheat_bed, PREHEAT_PETG_SET_BED_TEMP_VP);
+      ui.material_preset[2].bed_temp = temp_preheat_bed;
+      settings.save();
       break;
 
     case CUSTHeadSetEnterKey:
       temp_preheat_nozzle = recdat.data[0];
       RTS_SndData(temp_preheat_nozzle, PREHEAT_CUST_SET_NOZZLE_TEMP_VP);
+      ui.material_preset[3].hotend_temp = temp_preheat_nozzle;
+      settings.save();
       break;
 
     case CUSTBedSetEnterKey:
       temp_preheat_bed = recdat.data[0];
       RTS_SndData(temp_preheat_bed, PREHEAT_CUST_SET_BED_TEMP_VP);
+      ui.material_preset[3].bed_temp = temp_preheat_bed;
+      settings.save();
       break;
 
     if (leveling_running == 0 && !printingIsActive()){   
@@ -3534,12 +3531,12 @@ void RTSSHOW::RTS_HandleData(void)
       if (RTS_SD_Detected()) {
         if (recdat.data[0] > CardRecbuf.Filesum) break;
         CardRecbuf.recordcount = recdat.data[0] - 1;
-        std::string filename = CardRecbuf.Cardfilename[CardRecbuf.recordcount];
-        // Find the last occurrence of the '.' character in the filename
-        std::size_t dot_pos = filename.find_last_of('.');
+        char *fname = CardRecbuf.Cardfilename[CardRecbuf.recordcount];
+        // Find last '.' (very lightweight vs std::string)
+        const char *dot = strrchr(fname, '.');
 
-        if (dot_pos == std::string::npos) {
-          card.cd(CardRecbuf.Cardfilename[CardRecbuf.recordcount]);
+        if (!dot) {
+          card.cd(fname);
           int16_t fileCnt = card.get_num_items();
           card.getWorkDirName();
           if (fileCnt > 0) {
@@ -3572,7 +3569,8 @@ void RTSSHOW::RTS_HandleData(void)
           #if ENABLED(E3S1PRO_RTS_GCODE_PREVIEW)
             char ret;
             RTS_ShowPreviewImage(false);
-            ret = gcodePicDataSendToDwin(CardRecbuf.Cardfilename[CardRecbuf.recordcount],VP_OVERLAY_PIC_PTINT,PIC_FORMAT_JPG, PIC_RESOLUTION_250_250);
+            //ret = gcodePicDataSendToDwin(CardRecbuf.Cardfilename[CardRecbuf.recordcount],VP_OVERLAY_PIC_PTINT,PIC_FORMAT_JPG, PIC_RESOLUTION_250_250);
+            ret = gcodePicDataSendToDwin(fname, VP_OVERLAY_PIC_PTINT, PIC_FORMAT_JPG, PIC_RESOLUTION_250_250);
             if (ret == PIC_OK) {
               RTS_ResetPrintData(false);
               RTS_SendPrintData();
@@ -3605,7 +3603,7 @@ void RTSSHOW::RTS_HandleData(void)
           return;
         }
 
-        const char* commands[] = {
+        static const char* const commands[] = {
             "M92", "M201", "M203", "M204", "M205", "M206", "M301", "M304", "M593 X", "M593 Y", "M851", "M900", "M19", "M19"
         };
         // Define the buffer to hold the command string
@@ -4124,7 +4122,7 @@ void EachMomentUpdate(void)
         // basically always while SD printing
         if(card.isPrinting() && (last_cardpercentValue != card.percentDone()) && !lcd_rts_settings.external_m73)
         {
-          if((unsigned char) card.percentDone() > 0)
+          if((unsigned char)card.percentDone() > 0)
           {
             Percentrecord = card.percentDone();
             if(Percentrecord <= 100)
@@ -4152,12 +4150,11 @@ void EachMomentUpdate(void)
             RTS_ResetSingleVP(PRINT_REMAIN_TIME_HOUR_VP);
             RTS_ResetSingleVP(PRINT_REMAIN_TIME_MIN_VP);
           }else{
-              int _remain_time = 0;
-              _remain_time = ((elapsed.value) * ((float)card.getFileSize() / (float)card.getIndex())) - (elapsed.value);
-
-              if(_remain_time < 0) _remain_time = 0;
-              rtscheck.RTS_SndData(_remain_time / 3600, PRINT_REMAIN_TIME_HOUR_VP);
-              rtscheck.RTS_SndData((_remain_time % 3600) / 60, PRINT_REMAIN_TIME_MIN_VP);
+            int _remain_time = 0;
+            _remain_time = ((elapsed.value) * ((float)card.getFileSize() / (float)card.getIndex())) - (elapsed.value);
+            if(_remain_time < 0) _remain_time = 0;
+            rtscheck.RTS_SndData(_remain_time / 3600, PRINT_REMAIN_TIME_HOUR_VP);
+            rtscheck.RTS_SndData((_remain_time % 3600) / 60, PRINT_REMAIN_TIME_MIN_VP);
           }
         } else if ((ui.get_progress_percent() != last_progress_percent || ui.get_remaining_time() != last_remaining_time) && card.isPrinting() && !lcd_rts_settings.external_m73) {
           rtscheck.RTS_SndData(ui.get_remaining_time() / 3600, PRINT_REMAIN_TIME_HOUR_VP);
@@ -4172,7 +4169,7 @@ void EachMomentUpdate(void)
             rtscheck.RTS_SndData(elapsed_seconds / 3600, PRINT_TIME_HOUR_VP);
             rtscheck.RTS_SndData((elapsed_seconds % 3600) / 60, PRINT_TIME_MIN_VP);
           }
-          last_progress_percent = ui.get_progress_percent();
+          last_progress_percent = (uint8_t)ui.get_progress_percent();
           last_remaining_time = ui.get_remaining_time();
         }
 
@@ -4258,12 +4255,12 @@ void RTSSHOW::languagedisplayUpdate(void)
   RTS_SendLang(BED_SET_TITLE_VP);
   RTS_SendLang(LEVEL_ZOFFSET_TITLE_VP);
   RTS_SendLang(FAN_CONTROL_TITLE_VP);
-  RTS_SendLang(MOVE_AXIS_ENTER_GREY_TITLE_VP);
-  RTS_SendLang(CHANGE_FILAMENT_GREY_TITLE_VP);
-  RTS_SendLang(PREHAET_PAGE_GREY_TITLE_VP);
-  RTS_SendLang(MOVE_AXIS_ENTER_BLACK_TITLE_VP);
-  RTS_SendLang(CHANGE_FILAMENT_BLACK_TITLE_VP);
-  RTS_SendLang(PREHAET_PAGE_BLACK_TITLE_VP);
+  RTS_SendLang(MOVE_AXIS_ENTER_GREY_TITLE_VP); // obsolete
+  RTS_SendLang(CHANGE_FILAMENT_GREY_TITLE_VP); // obsolete
+  RTS_SendLang(PREHAET_PAGE_GREY_TITLE_VP); // obsolete
+  RTS_SendLang(MOVE_AXIS_ENTER_BLACK_TITLE_VP); // obsolete
+  RTS_SendLang(CHANGE_FILAMENT_BLACK_TITLE_VP); // obsolete
+  RTS_SendLang(PREHAET_PAGE_BLACK_TITLE_VP); // obsolete
   RTS_SendLang(PREHEAT_PLA_BUTTON_TITLE_VP);
   RTS_SendLang(PREHEAT_ABS_BUTTON_TITLE_VP);
   RTS_SendLang(PREHEAT_PETG_BUTTON_TITLE_VP);
@@ -4562,28 +4559,31 @@ void RTS_SetBltouchHSMode(void)
   }
 }
 
-void RTS_LoadMeshPointOffsets(void)
-{
-  if (lcd_rts_settings.max_points == 5){
-    color_sp_offset = 0;
-    rectWidth = 83; rectHeight = 54;
-    rect_0_y_top = 451; rect_1_x_top_odd = 364; rect_0_x_top_even = 32;
-    rect_x_offset = 83; rect_y_offset = 54;
-    rtscheck.RTS_SndData(209, MESH_SIZE_ICON_VP);
-  }
-  if (lcd_rts_settings.max_points == 7){
-    color_sp_offset = 25;
-    rectWidth = 61; rectHeight = 36;
-    rect_0_y_top = 463; rect_1_x_top_odd = 392; rect_0_x_top_even = 26;
-    rect_x_offset = 61; rect_y_offset = 36;
-    rtscheck.RTS_SndData(210, MESH_SIZE_ICON_VP);
-  }
-  if (lcd_rts_settings.max_points == 10){
-    color_sp_offset = 74;
-    rectWidth = 43; rectHeight = 28;
-    rect_0_y_top = 481; rect_1_x_top_odd = 413; rect_0_x_top_even = 26;    
-    rect_x_offset = 43; rect_y_offset = 28;
-    rtscheck.RTS_SndData(211, MESH_SIZE_ICON_VP);
+struct MeshParams {
+  uint8_t color_sp_offset;
+  uint16_t rectWidth, rectHeight;
+  uint16_t rect_0_y_top, rect_1_x_top_odd, rect_0_x_top_even;
+  uint16_t rect_x_offset, rect_y_offset;
+  uint8_t icon_id;
+};
+
+const MeshParams mesh_params[] = {
+  {0,   83, 54, 451, 364, 32, 83, 54, 209},   // 5 points
+  {25,  61, 36, 463, 392, 26, 61, 36, 210},   // 7 points
+  {74,  43, 28, 481, 413, 26, 43, 28, 211}    // 10 points
+};
+
+void RTS_LoadMeshPointOffsets(void) {
+  int idx = (lcd_rts_settings.max_points  == 5) ? 0 :
+            (lcd_rts_settings.max_points  == 7) ? 1 :
+            (lcd_rts_settings.max_points  == 10) ? 2 : -1;
+  if (idx >= 0) {
+    const MeshParams &p = mesh_params[idx];
+    color_sp_offset = p.color_sp_offset;
+    rectWidth = p.rectWidth; rectHeight = p.rectHeight;
+    rect_0_y_top = p.rect_0_y_top; rect_1_x_top_odd = p.rect_1_x_top_odd; rect_0_x_top_even = p.rect_0_x_top_even;
+    rect_x_offset = p.rect_x_offset; rect_y_offset = p.rect_y_offset;
+    rtscheck.RTS_SndData(p.icon_id, MESH_SIZE_ICON_VP);
   }
 }
 
@@ -4812,11 +4812,6 @@ void RTS_SendHeadCurrentTemp()
 {
   rtscheck.RTS_SndData(thermalManager.temp_hotend[0].celsius, HEAD_CURRENT_TEMP_VP);
   rtscheck.RTS_SndData(thermalManager.temp_hotend[0].target, HEAD_SET_TEMP_VP);
-}
-
-void RTS_SendMoveaxisUnitIcon(uint8_t icon)
-{
-  rtscheck.RTS_SndData(icon, MOVEAXIS_UNIT_ICON_VP);
 }
 
 void RTS_SendDefaultRates()
@@ -5095,12 +5090,12 @@ void RTS_SetGridMaxPoints(uint8_t gridmaxpoints, uint8_t m19load)
   if (gridmaxpoints == 5 || gridmaxpoints == 7 || gridmaxpoints == 10){
     RTS_ResetMesh();
     lcd_rts_settings.max_points = gridmaxpoints;
+    bedlevel.max_points.x = gridmaxpoints;
+    bedlevel.max_points.y = gridmaxpoints;
     RTS_LoadMeshPointOffsets();
     RTS_SetBltouchHSMode();
     rtscheck.RTS_SndData(lcd_rts_settings.max_points * lcd_rts_settings.max_points, AUTO_BED_LEVEL_END_POINT);
     rtscheck.RTS_SndData(gridmaxpoints, SET_GRID_MAX_POINTS_VP);
-    bedlevel.max_points.x = gridmaxpoints;
-    bedlevel.max_points.y = gridmaxpoints;
     if (settingsload != 1) queue.enqueue_now_P(PSTR("M84"));
     queue.enqueue_now_P(PSTR("G92.9Z0"));
     if (m19load == 0){
@@ -5124,7 +5119,7 @@ void RTS_MoveAxisHoming(void)
   }
   else if(waitway == 4)
   {
-    rtscheck.RTS_SndData(ExchangePageBase + 16 + (AxisUnitMode - 1), ExchangepageAddr);
+    rtscheck.RTS_SndData(ExchangePageBase + 16, ExchangepageAddr);
     change_page_font = 16;
     waitway = 0;
   }  
@@ -5140,20 +5135,20 @@ void RTS_MoveAxisHoming(void)
     waitway = 0;
   }else if(waitway == 8)
   {
-    rtscheck.RTS_SndData(ExchangePageBase + 78 + (AxisUnitMode - 1), ExchangepageAddr);
-    change_page_font = 78 + (AxisUnitMode - 1);
+    rtscheck.RTS_SndData(ExchangePageBase + 78, ExchangepageAddr);
+    change_page_font = 78;
     waitway = 0;
   }else if(waitway == 9)
   {
-    rtscheck.RTS_SndData(ExchangePageBase + 70 + (AxisUnitMode - 1), ExchangepageAddr);
-    change_page_font = 70 + (AxisUnitMode - 1);
+    rtscheck.RTS_SndData(ExchangePageBase + 70, ExchangepageAddr);
+    change_page_font = 70;
     waitway = 0;
   }else if(waitway == 10){
     RTS_ShowPage(51);
     waitway = 0;
   }else if(waitway == 14)
   {
-    rtscheck.RTS_SndData(ExchangePageBase + 86 + (AxisUnitMode - 1), ExchangepageAddr);
+    rtscheck.RTS_SndData(ExchangePageBase + 86, ExchangepageAddr);
     change_page_font = 86;
     waitway = 0;
   }

@@ -921,7 +921,7 @@ void unified_bed_leveling::shift_mesh_height(const float zoffs) {
 
     #if ENABLED(E3S1PRO_RTS)
       leveling_running = 0;
-      if (card.isStillPrinting()){
+      if (printingIsActive()){
         RTS_LoadMesh();
         delay(500);
         RTS_ShowPage(10);

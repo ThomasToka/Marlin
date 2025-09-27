@@ -478,39 +478,28 @@ void PrintJobRecovery::resume() {
     #endif
 
     #if ENABLED(E3S1PRO_RTS)
-      float z_now = info.flag.raised ? z_raised : resume_pos.z + lcd_rts_settings.plr_zraise;
+      float z_now = info.flag.raised ? z_raised : resume_pos.z + info.zraise + (lcd_rts_settings.boot_zraise ? Z_AFTER_PROBING : 0);
     #else
       float z_now = info.flag.raised ? z_raised : resume_pos.z;
     #endif
-
     #if !HOMING_Z_DOWN
       // Set Z to the real position
       PROCESS_SUBCOMMANDS_NOW(TS(F("G92.9Z"), p_float_t(z_now, 3)));
     #endif
-    #if DISABLED(E3S1PRO_RTS)
-      // Does Z need to be raised now? It should be raised before homing XY.
-      if (z_raised > z_now) {
-        z_now = z_raised;
-        PROCESS_SUBCOMMANDS_NOW(TS(F("G1F600Z"), p_float_t(z_now, 3)));
-      }
-    #endif
+    // Does Z need to be raised now? It should be raised before homing XY.
+    if (z_raised > z_now) {
+      z_now = z_raised;
+      PROCESS_SUBCOMMANDS_NOW(TS(F("G1F600Z"), p_float_t(z_now, 3)));
+    }
     // Home XY with no Z raise
-    #if ENABLED(E3S1PRO_RTS)
-      PROCESS_SUBCOMMANDS_NOW(TS(F("G28R"), lcd_rts_settings.plr_zraise, F("XY"))); // No raise during G28
-    #else
-      PROCESS_SUBCOMMANDS_NOW(F("G28R0XY")); // No raise during G28
-    #endif
+    PROCESS_SUBCOMMANDS_NOW(F("G28R0XY")); // No raise during G28
 
   #endif
 
   #if HOMING_Z_DOWN
     // Move to a safe XY position and home Z while avoiding the print.
     const xy_pos_t p = xy_pos_t(POWER_LOSS_ZHOME_POS) TERN_(HOMING_Z_WITH_PROBE, - probe.offset_xy);
-    #if ENABLED(E3S1PRO_RTS)
-      PROCESS_SUBCOMMANDS_NOW(TS(F("G1F1000X"), p_float_t(p.x, 3), 'Y', p_float_t(p.y, 3), F("\nG28HL0Z")));
-    #else
-      PROCESS_SUBCOMMANDS_NOW(TS(F("G1F1000X"), p_float_t(p.x, 3), 'Y', p_float_t(p.y, 3), F("\nG28HZ")));
-    #endif
+    PROCESS_SUBCOMMANDS_NOW(TS(F("G1F1000X"), p_float_t(p.x, 3), 'Y', p_float_t(p.y, 3), F("\nG28HZ")));
   #endif
 
   // Mark all axes as having been homed (no effect on current_position)

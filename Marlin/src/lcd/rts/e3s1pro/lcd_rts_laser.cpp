@@ -258,9 +258,6 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       }
       else if(recdat.data[0] == 2)
       {
-        AxisUnitMode = 1;
-        axis_unit = 10.0;
-        
         if(!laser_axes_should_home) {
           laser_axes_should_home = true;
           waitway = 9;
@@ -495,7 +492,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
         zprobe_zoffset = ((float)recdat.data[0]) / 100;
         zprobe_zoffset += 0.001;
       }
-      if(WITHIN((zprobe_zoffset), PROBE_OFFSET_ZMIN, PROBE_OFFSET_XMAX))
+      if(WITHIN((zprobe_zoffset), PROBE_OFFSET_ZMIN, PROBE_OFFSET_ZMAX))
       {
         babystep.add_mm_laser(Z_AXIS, zprobe_zoffset - last_zoffset);
         //SERIAL_ECHOPAIR("\nZoffset=", zprobe_zoffset - last_zoffset);
@@ -602,25 +599,16 @@ void RTSSHOW::RTS_HandleData_Laser(void)
     case AutoHomeKey:
       if(recdat.data[0] == 1)
       {
-        AxisUnitMode = 1;
-        axis_unit = 10.0;
         RTS_ShowPage(70);
-        RTS_SendMoveaxisUnitIcon(3);
       }
-      else if(recdat.data[0] == 2)
-      {
-        AxisUnitMode = 2;
-        axis_unit = 1.0;
-        RTS_ShowPage(71);
-        RTS_SendMoveaxisUnitIcon(2);
-      }
-      else if(recdat.data[0] == 3)
-      {
-        AxisUnitMode = 3;
-        axis_unit = 0.1;
-        RTS_ShowPage(72);
-        RTS_SendMoveaxisUnitIcon(1);
-      }
+      //else if(recdat.data[0] == 2)
+      //{ // obsolete
+      //  RTS_ShowPage(71);
+      //}
+      //else if(recdat.data[0] == 3)
+      //{ // obsolete
+      //  RTS_ShowPage(72);
+      //}
       else if(recdat.data[0] == 4)
       {
         waitway = 4;
@@ -638,18 +626,15 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       break;
 
     case XaxismoveKey:
-      float x_min, x_max;
       waitway = 4;
-      x_min = 0;
-      x_max = X_MAX_POS;
       current_position[X_AXIS] = ((float)recdat.data[0]) / 10;
-      if(current_position[X_AXIS] < x_min)
+      if(current_position[X_AXIS] < 0)
       {
-        current_position[X_AXIS] = x_min;
+        current_position[X_AXIS] = 0;
       }
-      else if(current_position[X_AXIS] > x_max)
+      else if(current_position[X_AXIS] > X_MAX_POS)
       {
-        current_position[X_AXIS] = x_max;
+        current_position[X_AXIS] = X_MAX_POS;
       }
       RTS_line_to_current(X_AXIS);
       RTS_SendCurrentPosition(1);
@@ -659,18 +644,15 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       break;
 
     case YaxismoveKey:
-      float y_min, y_max;
       waitway = 4;
-      y_min = 0;
-      y_max = Y_MAX_POS;
       current_position[Y_AXIS] = ((float)recdat.data[0]) / 10;
-      if(current_position[Y_AXIS] < y_min)
+      if(current_position[Y_AXIS] < 0)
       {
-        current_position[Y_AXIS] = y_min;
+        current_position[Y_AXIS] = 0;
       }
-      else if(current_position[Y_AXIS] > y_max)
+      else if(current_position[Y_AXIS] > Y_MAX_POS)
       {
-        current_position[Y_AXIS] = y_max;
+        current_position[Y_AXIS] = Y_MAX_POS;
       }
       RTS_line_to_current(Y_AXIS);
       RTS_SendCurrentPosition(2);
@@ -680,19 +662,15 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       break;
 
     case ZaxismoveKey:
-      float z_min, z_max;
       waitway = 4;
-      z_min = Z_MIN_POS;
-      z_max = Z_MAX_POS;
-
       current_position[Z_AXIS] = ((float)recdat.data[0])/10;
-      if (current_position[Z_AXIS] < z_min)
+      if (current_position[Z_AXIS] < Z_MIN_POS)
       {
-        current_position[Z_AXIS] = z_min;
+        current_position[Z_AXIS] = Z_MIN_POS;
       }
-      else if (current_position[Z_AXIS] > z_max)
+      else if (current_position[Z_AXIS] > Z_MAX_POS)
       {
-        current_position[Z_AXIS] = z_max;
+        current_position[Z_AXIS] = Z_MAX_POS;
       }
 
       RTS_line_to_current(Z_AXIS);
@@ -721,7 +699,6 @@ void RTSSHOW::RTS_HandleData_Laser(void)
     case PowerContinuePrintKey:
       if(recdat.data[0] == 1)
       {
-
       #if ENABLED(POWER_LOSS_RECOVERY)
         if(recovery.recovery_flag)
         {
@@ -1264,8 +1241,6 @@ void RTSSHOW::RTS_HandleData_Laser(void)
 
       }else if(recdat.data[0] == 2)// 轴移动
       {
-        AxisUnitMode = 1;
-        axis_unit = 10.0;
         RTS_ShowPage(78);
       }else if(recdat.data[0] == 3) // 直接雕刻
       {
@@ -1338,19 +1313,13 @@ void RTSSHOW::RTS_HandleData_Laser(void)
     case LaserMoveAxis:
       if(recdat.data[0] == 1)//
       {
-        AxisUnitMode = 1;
-        axis_unit = 10.0;
         RTS_ShowPage(78);
-      }else if(recdat.data[0] == 2)//
-      {
-        AxisUnitMode = 2;
-        axis_unit = 1.0;
-        RTS_ShowPage(79);
-      }else if(recdat.data[0] == 3)
-      {
-        AxisUnitMode = 3;
-        axis_unit = 0.1;
-        RTS_ShowPage(80);
+      //}else if(recdat.data[0] == 2)//
+      //{ // obsolete
+      //  RTS_ShowPage(79);
+      //}else if(recdat.data[0] == 3)
+      //{ // obsolete
+      //  RTS_ShowPage(80);
       }else if(recdat.data[0] == 4)// 返回
       {
         RTS_ShowPage(75);

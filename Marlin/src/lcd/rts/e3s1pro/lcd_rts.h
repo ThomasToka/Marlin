@@ -175,7 +175,7 @@ const uint16_t DGUS_VERSION = 0x000F;
 #define AUTO_BED_LEVEL_24POINT_VP          0x111C
 #define AUTO_BED_LEVEL_25POINT_VP          0x111E
 
-#define MOVEAXIS_UNIT_ICON_VP              0x116A
+#define MOVEAXIS_UNIT_ICON_VP              0x116A // obsolete
 #define PREHAEAT_NOZZLE_ICON_VP            0x116B
 #define PREHAEAT_HOTBED_ICON_VP            0x116C
 #define FILAMENT_CONTROL_ICON_VP           0x116D
@@ -244,16 +244,16 @@ const uint16_t DGUS_VERSION = 0x000F;
 
 #define PRINT_ADJUST_MENT_TITLE_VP         0x130D
 #define PRINT_SPEED_TITLE_VP               0x130E
-#define HEAD_SET_TITLE_VP                  0x130F
+#define HEAD_SET_TITLE_VP                  0x130F // obsolete
 #define BED_SET_TITLE_VP                   0x1310
 #define LEVEL_ZOFFSET_TITLE_VP             0x1311
 #define FAN_CONTROL_TITLE_VP               0x1312
 #define LED_CONTROL_TITLE_VP               0x1313
 
-#define MOVE_AXIS_ENTER_GREY_TITLE_VP      0x1314
-#define CHANGE_FILAMENT_GREY_TITLE_VP      0x1315
-#define PREHAET_PAGE_GREY_TITLE_VP         0x1316
-#define MOVE_AXIS_ENTER_BLACK_TITLE_VP     0x1317
+#define MOVE_AXIS_ENTER_GREY_TITLE_VP      0x1314 
+#define CHANGE_FILAMENT_GREY_TITLE_VP      0x1315 // obsolete
+#define PREHAET_PAGE_GREY_TITLE_VP         0x1316 // obsolete
+#define MOVE_AXIS_ENTER_BLACK_TITLE_VP     0x1317 // obsolete
 #define CHANGE_FILAMENT_BLACK_TITLE_VP     0x1318
 #define PREHAET_PAGE_BLACK_TITLE_VP        0x1319
 
@@ -550,14 +550,13 @@ int16_t display_volume;
 uint8_t screen_brightness;
 bool display_standby;
 uint8_t standby_brightness;
-int16_t standby_time_seconds;  
+int16_t standby_time_seconds;
 uint8_t max_points;
 uint8_t probe_margin_x;
 uint8_t probe_margin_y_front;
 uint8_t probe_margin_y_back;
 bool external_m73;
 uint8_t total_probing;
-uint8_t plr_zraise;
 bool boot_zraise;
 };
 
@@ -742,10 +741,10 @@ const unsigned long Addrbuf[] =
   0x1056,   // 19
   0x105C,
   0x105F,
-  0x1090,
-  0x1092,
-  0x1094,   // 24
-  0x1096,
+  0x1090, // Preheat PLA Nozzle
+  0x1092, // Preheat PLA Bed
+  0x1094, // Preheat ABS Nozzle
+  0x1096, // Preheat ABS Bed
   0x1098,
   0x109A,
   0x109E,
@@ -792,10 +791,10 @@ const unsigned long Addrbuf[] =
    0x2214, // Advance_K_set 
    0x163A, // XoffsetEnterKey
    0x164A, // YoffsetEnterKey 
-   0x175A, // PETG NozzleTemp
-   0x176A, // PETG BedTemp
-   0x177A, // CUST NozzleTemp
-   0x178A, // CUST BedTemp 
+   0x175A, // Preheat PETG Nozzle
+   0x176A, // Preheat PETG Bed
+   0x177A, // Preheat CUST Nozzle
+   0x178A, // Preheat CUST Bed 
    0x173A, // X Frequency
    0x174A, // Y Frequency
    0x185A, // X Zeta
@@ -874,7 +873,6 @@ void RTS_SendPrintData(void);
 void RTS_SendBedTemp(void);
 void RTS_SendHeadTemp(void);
 void RTS_SendHeadCurrentTemp();
-void RTS_SendMoveaxisUnitIcon(uint8_t icon);
 void RTS_SendDefaultRates();
 float* getM503_settings();
 void RTS_SetProbeCount(uint8_t probescount, uint8_t m19load);

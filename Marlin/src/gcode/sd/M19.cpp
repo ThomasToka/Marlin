@@ -182,11 +182,7 @@ switch(action){
     case 8:
         if(leveling_running == 0)
         {    
-            if (parser.seenval('F')){
-                m19_f = parser.value_int();
-                lcd_rts_settings.plr_zraise = m19_f;
-            }
-            settings.save();
+          // removed in v035
         }
     break;
     case 9:

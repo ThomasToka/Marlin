@@ -66,7 +66,7 @@
 
 // @section machine
 #if ENABLED(E3S1PRO_RTS)
-  #define FORK_VERSION "v034"
+  #define FORK_VERSION "v035"
   #define LCD_SERIAL_PORT 2
   #define LCD_BAUDRATE 115200
 #endif
