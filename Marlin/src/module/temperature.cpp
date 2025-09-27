@@ -500,7 +500,7 @@ PGMSTR(str_t_heating_failed, STR_T_HEATING_FAILED);
     #if NUM_REDUNDANT_FANS
       if (fan == 0) {
         for (uint8_t f = REDUNDANT_PART_COOLING_FAN; f < REDUNDANT_PART_COOLING_FAN + NUM_REDUNDANT_FANS; ++f)
-          thermalManager.set_fan_speed(f, speed);
+          set_fan_speed(f, speed);
       }
     #endif
 
@@ -910,7 +910,7 @@ void Temperature::factory_reset() {
 
     #if ENABLED(PRINTER_EVENT_LEDS)
       const celsius_float_t start_temp = GHV(degChamber(), degBed(), degHotend(heater_id));
-      const LEDColor oldcolor = ONHEATINGSTART();
+      const LED1Color_t oldcolor = ONHEATINGSTART();
     #endif
 
     TERN_(TEMP_TUNING_MAINTAIN_FAN, adaptive_fan_slowing = false);
@@ -976,7 +976,7 @@ void Temperature::factory_reset() {
             }
           }
           SHV((bias + d) >> 1);
-          TERN_(HAS_STATUS_MESSAGE, ui.status_printf(0, F(S_FMT " %i/%i"), GET_TEXT_F(MSG_PID_CYCLE), cycles, ncycles));
+          TERN_(HAS_STATUS_MESSAGE, ui.status_printf(0, F(S_FMT " %i/%i"), GET_TEXT(MSG_PID_CYCLE), cycles, ncycles));
           cycles++;
           #if ENABLED(E3S1PRO_RTS)
             int cycles_to_send;
@@ -1850,7 +1850,7 @@ void Temperature::mintemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_T
       #endif // !PID_OPENLOOP
     }
 
-    FORCE_INLINE void debug(const_celsius_float_t c, const_float_t pid_out, FSTR_P const name=nullptr, const int8_t index=-1) {
+    FORCE_INLINE void debug(const celsius_float_t c, const float pid_out, FSTR_P const name=nullptr, const int8_t index=-1) {
       if (TERN0(HAS_PID_DEBUG, thermalManager.pid_debug_flag)) {
         SERIAL_ECHO_START();
         if (name) SERIAL_ECHO(name);
@@ -2407,7 +2407,7 @@ void Temperature::mintemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_T
       temp_cooler.soft_pwm_amount = 0;
       if (flag_cooler_state) {
         flag_cooler_state = false;
-        thermalManager.set_fan_speed(COOLER_FAN_INDEX, 0);
+        set_fan_speed(COOLER_FAN_INDEX, 0);
       }
       WRITE_HEATER_COOLER(LOW);
     }
@@ -3297,7 +3297,8 @@ void Temperature::init() {
   TERN_(HAS_TEMP_ADC_BOARD,     hal.adc_enable(TEMP_BOARD_PIN));
   TERN_(HAS_TEMP_ADC_SOC,       hal.adc_enable(TEMP_SOC_PIN));
   TERN_(HAS_TEMP_ADC_REDUNDANT, hal.adc_enable(TEMP_REDUNDANT_PIN));
-  TERN_(FILAMENT_WIDTH_SENSOR,  hal.adc_enable(FILWIDTH_PIN));
+  TERN_(HAS_FILWIDTH_ADC,       hal.adc_enable(FILWIDTH_PIN));
+  TERN_(HAS_FILWIDTH2_ADC,      hal.adc_enable(FILWIDTH2_PIN));
   TERN_(HAS_ADC_BUTTONS,        hal.adc_enable(ADC_KEYPAD_PIN));
   TERN_(POWER_MONITOR_CURRENT,  hal.adc_enable(POWER_MONITOR_CURRENT_PIN));
   TERN_(POWER_MONITOR_VOLTAGE,  hal.adc_enable(POWER_MONITOR_VOLTAGE_PIN));
@@ -3482,7 +3483,7 @@ void Temperature::init() {
    *
    * TODO: Embed the last 3 parameters during init, if not less optimal
    */
-  void Temperature::tr_state_machine_t::run(const_celsius_float_t current, const_celsius_float_t target, const heater_id_t heater_id, const uint16_t period_seconds, const celsius_float_t hysteresis_degc) {
+  void Temperature::tr_state_machine_t::run(const celsius_float_t current, const celsius_float_t target, const heater_id_t heater_id, const uint16_t period_seconds, const celsius_float_t hysteresis_degc) {
 
     #if HEATER_IDLE_HANDLER
       // Convert the given heater_id_t to an idle array index
@@ -4596,11 +4597,25 @@ void Temperature::isr() {
       case MeasureTemp_7: ACCUMULATE_ADC(temp_hotend[7]); break;
     #endif
 
-    #if ENABLED(FILAMENT_WIDTH_SENSOR)
+    #if HAS_FILWIDTH_ADC
       case Prepare_FILWIDTH: hal.adc_start(FILWIDTH_PIN); break;
       case Measure_FILWIDTH:
-        if (!hal.adc_ready()) next_sensor_state = adc_sensor_state; // Redo this state
-        else filwidth.accumulate(hal.adc_value());
+        if (!hal.adc_ready())
+          next_sensor_state = adc_sensor_state; // Redo this state
+        else {
+          TERN_(FILAMENT_WIDTH_SENSOR, filwidth.accumulate(hal.adc_value()));
+        }
+      break;
+    #endif
+
+    #if HAS_FILWIDTH2_ADC
+      case Prepare_FILWIDTH2: hal.adc_start(FILWIDTH2_PIN); break;
+      case Measure_FILWIDTH2:
+        if (!hal.adc_ready())
+          next_sensor_state = adc_sensor_state; // Redo this state
+        else {
+          TERN_(FILAMENT_WIDTH_SENSOR, filwidth.accumulate(hal.adc_value()));
+        }
       break;
     #endif
 
@@ -4699,7 +4714,7 @@ void Temperature::isr() {
    *    Redundant: " R:nnn.nn /nnn.nn"
    *     With ADC: " T0:nnn.nn /nnn.nn (nnn.nn)"
    */
-  static void print_heater_state(const heater_id_t e, const_celsius_float_t c, const_celsius_float_t t
+  static void print_heater_state(const heater_id_t e, const celsius_float_t c, const celsius_float_t t
     OPTARG(SHOW_TEMP_ADC_VALUES, const float r)
   ) {
     char k;
@@ -4817,7 +4832,7 @@ void Temperature::isr() {
         #else
           F("E1 " S_FMT)
         #endif
-        , heating ? GET_TEXT_F(MSG_HEATING) : GET_TEXT_F(MSG_COOLING)
+        , heating ? GET_TEXT(MSG_HEATING) : GET_TEXT(MSG_COOLING)
       );
 
       if (isM104) {
