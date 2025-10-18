@@ -289,8 +289,8 @@ typedef struct {
     p2.x = p1.x + dx;
     p2.y = p1.y + dy;
 
-    if (p2.x < 0 || p2.x >= (GRID_MAX_POINTS_X)) return;
-    if (p2.y < 0 || p2.y >= (GRID_MAX_POINTS_Y)) return;
+    if (p2.x < 0 || p2.x >= (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X))) return;
+    if (p2.y < 0 || p2.y >= (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_Y, GRID_MAX_POINTS_Y))) return;
 
     if (circle_flags.marked(p1.x, p1.y) && circle_flags.marked(p2.x, p2.y)) {
       xyz_pos_t s, e;
@@ -324,7 +324,8 @@ typedef struct {
 
       if (bed_temp > 25) {
         LCD_MESSAGE_MAX(MSG_G26_HEATING_BED);
-        ui.quick_feedback();
+
+        TERN_(HAS_MARLINUI_MENU, ui.quick_feedback());
         TERN_(HAS_MARLINUI_MENU, ui.capture());
         thermalManager.setTargetBed(bed_temp);
 
@@ -341,7 +342,11 @@ typedef struct {
 
     // Start heating the active nozzle
     LCD_MESSAGE_MAX(MSG_G26_HEATING_NOZZLE);
+    
+    #if DISABLED(E3S1PRO_RTS)
     ui.quick_feedback();
+    #endif
+    
     thermalManager.setTargetHotend(hotend_temp, active_extruder);
 
     // Wait for the temperature to stabilize
@@ -349,7 +354,10 @@ typedef struct {
       return G26_ERR;
 
     ui.reset_status();
+
+    #if DISABLED(E3S1PRO_RTS)
     ui.completion_feedback();
+    #endif
 
     return G26_OK;
   }
@@ -402,7 +410,9 @@ typedef struct {
     #endif
     {
       LCD_MESSAGE_MAX(MSG_G26_FIXED_LENGTH);
-      ui.quick_feedback();
+      #if DISABLED(E3S1PRO_RTS)
+        ui.quick_feedback();
+      #endif
       destination = current_position;
       destination.e += prime_length;
       prepare_internal_move_to_destination(fr_slow_e);
@@ -438,7 +448,7 @@ typedef struct {
 
       float closest = 99999.99;
 
-      GRID_LOOP(i, j) {
+      GRID_LOOP_USED(i, j) {
         if (!circle_flags.marked(i, j)) {
           // We found a circle that needs to be printed
           const xy_pos_t m = { bedlevel.get_mesh_x(i), bedlevel.get_mesh_y(j) };
@@ -634,10 +644,10 @@ void GcodeSuite::G26() {
   // Get repeat from 'R', otherwise do one full circuit
   grid_count_t g26_repeats;
   #if HAS_MARLINUI_MENU
-    g26_repeats = parser.intval('R', GRID_MAX_POINTS + 1);
+    g26_repeats = parser.intval('R', TERN(DYNAMIC_LEVELING, GRID_USED_POINTS, GRID_MAX_POINTS) + 1);
   #else
     if (parser.seen('R'))
-      g26_repeats = parser.has_value() ? parser.value_int() : GRID_MAX_POINTS + 1;
+      g26_repeats = parser.has_value() ? parser.value_int() : TERN(DYNAMIC_LEVELING, GRID_USED_POINTS, GRID_MAX_POINTS) + 1;
     else {
       SERIAL_ECHOLNPGM(GCODE_ERR_MSG("(R)epeat must be specified when not using an LCD."));
       return;
@@ -733,8 +743,8 @@ void GcodeSuite::G26() {
       // which is always drawn counter-clockwise.
       const xy_int8_t st = location;
       const bool f = st.y == 0,
-                 r = st.x >= (GRID_MAX_POINTS_X) - 1,
-                 b = st.y >= (GRID_MAX_POINTS_Y) - 1;
+                 r = st.x >= (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X)) - 1,
+                 b = st.y >= (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_Y, GRID_MAX_POINTS_Y)) - 1;
 
       #if ENABLED(ARC_SUPPORT)
 

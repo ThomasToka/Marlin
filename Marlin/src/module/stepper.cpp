@@ -2416,6 +2416,12 @@ hal_timer_t Stepper::block_phase_isr() {
   if (current_block) {
     // If current block is finished, reset pointer and finalize state
     if (step_events_completed >= step_event_count) {
+      #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+        if(laser_device.is_laser_device())
+        {
+          cutter.apply_power(0);
+        }
+      #endif
       #if ENABLED(DIRECT_STEPPING)
         // Direct stepping is currently not ready for HAS_I_AXIS
         #if STEPPER_PAGE_FORMAT == SP_4x4D_128

@@ -68,6 +68,13 @@ uint32_t PrintJobRecovery::cmd_sdpos, // = 0
 
 #if ENABLED(SOVOL_SV06_RTS)
   #include "../lcd/sovol_rts/sovol_rts.h"
+#elif ENABLED(E3S1PRO_RTS)
+  bool PrintJobRecovery::recovery_flag; // = false
+  #include "../lcd/rts/e3s1pro/lcd_rts.h"
+  #if ENABLED(E3S1PRO_RTS_LASER)
+    #include "../module/stepper.h"
+    #include "../feature/spindle_laser.h"    
+  #endif  
 #endif
 
 #if ENABLED(FWRETRACT)
@@ -95,6 +102,11 @@ PrintJobRecovery recovery;
     if (TERN0(PLR_CAN_ABORT, card.flag.abort_sd_printing)) return; \
     gcode.process_subcommands_now(cmd); \
   }while(0)
+
+#if ENABLED(E3S1PRO_RTS)
+  xyze_pos_t resume_pos;
+  uint32_t resume_sdpos;
+#endif
 
 /**
  * Clear the recovery info
@@ -132,11 +144,18 @@ bool PrintJobRecovery::check() {
   bool success = false;
   if (card.isMounted()) {
     load();
-    success = valid();
-    if (!success)
-      cancel();
-    else
-      queue.inject(F("M1000S"));
+    #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+      if(laser_device.is_laser_device()) {
+      purge();
+      } else
+		#endif  
+      {  
+        success = valid();
+        if (!success)
+          cancel();
+        else
+          queue.inject(F("M1000S"));
+      }
   }
   return success;
 }
@@ -156,6 +175,8 @@ void PrintJobRecovery::load() {
   if (exists()) {
     open(true);
     (void)file.read(&info, sizeof(info));
+    TERN_(E3S1PRO_RTS, resume_pos = info.current_position);
+    TERN_(E3S1PRO_RTS, resume_sdpos = info.sdpos);
     close();
   }
   debug(F("Load"));
@@ -174,6 +195,9 @@ void PrintJobRecovery::prepare() {
  */
 void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=POWER_LOSS_ZRAISE*/, const bool raised/*=false*/) {
 
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+    if(laser_device.is_laser_device()) return;
+  #endif
   // We don't check isStillPrinting here so a save may occur during a pause
 
   #if SAVE_INFO_INTERVAL_MS > 0
@@ -262,6 +286,7 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=POW
     info.flag.dryrun = !!(marlin_debug_flags & MARLIN_DEBUG_DRYRUN);
     info.flag.allow_cold_extrusion = TERN0(PREVENT_COLD_EXTRUSION, thermalManager.allow_cold_extrude);
 
+    TERN_(E3S1PRO_RTS, recovery_flag = PoweroffContinue); 
     write();
   }
 }
@@ -371,8 +396,10 @@ void PrintJobRecovery::write() {
  */
 void PrintJobRecovery::resume() {
   // Get these fields before any moves because stepper.cpp overwrites them
-  const xyze_pos_t resume_pos = info.current_position;
-  const uint32_t resume_sdpos = info.sdpos;
+  #if DISABLED(E3S1PRO_RTS)
+    const xyze_pos_t resume_pos = info.current_position;
+    const uint32_t resume_sdpos = info.sdpos;
+  #endif
 
   // Apply the dry-run flag if enabled
   if (info.flag.dryrun) marlin_debug_flags |= MARLIN_DEBUG_DRYRUN;
@@ -450,19 +477,20 @@ void PrintJobRecovery::resume() {
       #define HOMING_Z_DOWN 1
     #endif
 
-    float z_now = info.flag.raised ? z_raised : z_print;
-
+    #if ENABLED(E3S1PRO_RTS)
+      float z_now = info.flag.raised ? z_raised : resume_pos.z + info.zraise + (lcd_rts_settings.boot_zraise ? Z_AFTER_PROBING : 0);
+    #else
+      float z_now = info.flag.raised ? z_raised : resume_pos.z;
+    #endif
     #if !HOMING_Z_DOWN
       // Set Z to the real position
       PROCESS_SUBCOMMANDS_NOW(TS(F("G92.9Z"), p_float_t(z_now, 3)));
     #endif
-
     // Does Z need to be raised now? It should be raised before homing XY.
     if (z_raised > z_now) {
       z_now = z_raised;
       PROCESS_SUBCOMMANDS_NOW(TS(F("G1F600Z"), p_float_t(z_now, 3)));
     }
-
     // Home XY with no Z raise
     PROCESS_SUBCOMMANDS_NOW(F("G28R0XY")); // No raise during G28
 
@@ -567,7 +595,11 @@ void PrintJobRecovery::resume() {
   ));
 
   // Move back down to the saved Z for printing
-  PROCESS_SUBCOMMANDS_NOW(TS(F("G1F600Z"), p_float_t(z_print, 3)));
+  #if ENABLED(E3S1PRO_RTS)
+    PROCESS_SUBCOMMANDS_NOW(TS(F("G1F600Z"), p_float_t(resume_pos.z, 3)));
+  #else
+    PROCESS_SUBCOMMANDS_NOW(TS(F("G1F600Z"), p_float_t(z_print, 3)));
+  #endif
 
   // Restore the feedrate and percentage
   PROCESS_SUBCOMMANDS_NOW(TS(F("G1F"), info.feedrate));
@@ -610,7 +642,7 @@ void PrintJobRecovery::resume() {
     DEBUG_ECHOLN(prefix, F(" Job Recovery Info...\nvalid_head:"), info.valid_head, F(" valid_foot:"), info.valid_foot);
     if (info.valid_head) {
       if (info.valid_head == info.valid_foot) {
-        DEBUG_ECHOPGM("current_position: ");
+        DEBUG_ECHOPGM("info.current_position: ");
         LOOP_LOGICAL_AXES(i) {
           if (i) DEBUG_CHAR(',');
           DEBUG_ECHO(info.current_position[i]);

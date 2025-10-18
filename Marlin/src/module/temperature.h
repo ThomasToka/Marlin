@@ -1433,4 +1433,5 @@ class Temperature {
     #endif // HAS_THERMAL_PROTECTION
 };
 
+TERN_(E3S1PRO_RTS, extern raw_pid_t g_autoPID);
 extern Temperature thermalManager;

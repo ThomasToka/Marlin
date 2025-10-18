@@ -295,6 +295,7 @@
 #define STR_HOMING_FEEDRATE                 "Homing Feedrate"
 #define STR_TOOL_CHANGING                   "Tool-changing"
 #define STR_HOTEND_OFFSETS                  "Hotend offsets"
+#define STR_FLOW_RATE                       "Flow Percentage"
 #define STR_SERVO_ANGLES                    "Servo Angles"
 #define STR_HOTEND_PID                      "Hotend PID"
 #define STR_BED_PID                         "Bed PID"

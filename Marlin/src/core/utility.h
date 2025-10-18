@@ -32,8 +32,31 @@ void safe_delay(millis_t ms);           // Delay ensuring that temperatures are 
 #else
   inline void serial_delay(const millis_t) {}
 #endif
+#if ENABLED(AUTO_BED_LEVELING_UBL)
 
-#if GRID_MAX_POINTS
+  #if GRID_MAX_POINTS
+
+  // 16x16 bit arrays
+  template <int W, int H>
+  struct FlagBits {
+    bits_t(W) flags[H];
+    void fill()                                   { memset(flags, 0xFF, sizeof(flags)); }
+    void reset()                                  { memset(flags, 0x00, sizeof(flags)); }
+    void unmark(const uint8_t x, const uint8_t y) { CBI(flags[y], x); }
+    void mark(const uint8_t x, const uint8_t y)   { SBI(flags[y], x); }
+    bool marked(const uint8_t x, const uint8_t y) { return TEST(flags[y], x); }
+    inline void unmark(const xy_int8_t &xy)       { unmark(xy.x, xy.y); }
+    inline void mark(const xy_int8_t &xy)         { mark(xy.x, xy.y); }
+    inline bool marked(const xy_int8_t &xy)       { return marked(xy.x, xy.y); }
+  };
+
+  typedef FlagBits<GRID_MAX_POINTS_X, GRID_MAX_POINTS_Y> MeshFlags;
+
+  #endif
+
+#endif
+
+#if ENABLED(AUTO_BED_LEVELING_BILINEAR)
 
   // 16x16 bit arrays
   template <int W, int H>

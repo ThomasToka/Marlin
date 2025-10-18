@@ -67,6 +67,9 @@ extern const char M23_STR[], M24_STR[];
 typedef struct {
   bool saving:1,                // Receiving a G-code file or logging commands during a print
        logging:1,               // Log enqueued commands to the open file. See GCodeQueue::advance()
+       #if ENABLED(E3S1PRO_RTS)
+         reading:1,             // Enable reading for E3S1PRO_RTS
+       #endif
        sdprinting:1,            // Actively printing from the open file
        sdprintdone:1,           // The active job has reached the end, 100%
        mounted:1,               // The card or flash drive is mounted and ready to read/write
@@ -220,6 +223,9 @@ public:
 
   // Basic file ops
   static void openFileRead(const char * const path, const uint8_t subcall=0);
+  #if ENABLED(E3S1PRO_RTS)
+    static void openFileReadonly(const char * const path);
+  #endif
   static void openFileWrite(const char * const path);
   static void closefile(const bool store_location=false);
   static bool fileExists(const char * const name);
@@ -246,6 +252,9 @@ public:
   static void getAbsFilenameInCWD(char *dst);
   static void printSelectedFilename();
   static void openAndPrintFile(const char *name);   // (working directory or full path)
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+    static void openAndPausePrintFile(const char *name);
+  #endif
   static void startOrResumeFilePrinting();
   static void endFilePrintNow(TERN_(SD_RESORT, const bool re_sort=false));
   static void abortFilePrintNow(TERN_(SD_RESORT, const bool re_sort=false));
@@ -314,6 +323,9 @@ public:
   // Print File stats
   static uint32_t getFileSize()  { return filesize; }
   static uint32_t getIndex()     { return sdpos; }
+  #if ENABLED(E3S1PRO_RTS)
+    static inline uint32_t getFileCurPosition()     { return myfile.curPosition(); }
+  #endif
   static bool isFileOpen()       { return isMounted() && myfile.isOpen(); }
   static bool eof()              { return getIndex() >= getFileSize(); }
 

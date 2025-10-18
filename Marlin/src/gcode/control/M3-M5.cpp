@@ -27,6 +27,9 @@
 #include "../gcode.h"
 #include "../../feature/spindle_laser.h"
 #include "../../module/planner.h"
+#if ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
+#endif
 
 /**
  * Laser:
@@ -78,7 +81,7 @@ void GcodeSuite::M3_M4(const bool is_M4) {
     reset_stepper_timeout(); // Reset timeout to allow subsequent G-code to power the laser (imm.)
   #endif
 
-  if (cutter.cutter_mode == CUTTER_MODE_STANDARD)
+  //if (cutter.cutter_mode == CUTTER_MODE_STANDARD)
     planner.synchronize();   // Wait for previous movement commands (G0/G1/G2/G3) to complete before changing power
 
   #if ENABLED(LASER_FEATURE)
@@ -92,7 +95,11 @@ void GcodeSuite::M3_M4(const bool is_M4) {
   auto get_s_power = [] {
     if (parser.seenval('S')) {
       const float v = parser.value_float();
-      cutter.menuPower = cutter.unitPower = TERN(LASER_POWER_TRAP, constrain( v, 0, CUTTER_POWER_MAX), cutter.power_to_range(v));
+      #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+        cutter.menuPower = cutter.unitPower = laser_device.power16_to_8(v);
+      #else
+        cutter.menuPower = cutter.unitPower = TERN(LASER_POWER_TRAP, constrain( v, 0, CUTTER_POWER_MAX), cutter.power_to_range(v));
+      #endif
     }
     else if (parser.seenval('O')) { // pwr in PWM units
       const float v = parser.value_float();

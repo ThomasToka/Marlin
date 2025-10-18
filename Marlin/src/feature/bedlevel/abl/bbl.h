@@ -23,25 +23,37 @@
 
 #include "../../../inc/MarlinConfigPre.h"
 
+#if ENABLED(E3S1PRO_RTS)
+  #include "../bedlevel.h"
+#endif
+
 class LevelingBilinear {
 public:
   static bed_mesh_t z_values;
   static xy_pos_t grid_spacing, grid_start;
+  TERN_(DYNAMIC_LEVELING, static xy_uint8_t max_points);
 
 private:
   static xy_float_t grid_factor;
   static xy_pos_t cached_rel;
   static xy_int8_t cached_g;
 
-  static void extrapolate_one_point(const uint8_t x, const uint8_t y, const int8_t xdir, const int8_t ydir);
+  #if DISABLED(DYNAMIC_LEVELING)
+    static void extrapolate_one_point(const uint8_t x, const uint8_t y, const int8_t xdir, const int8_t ydir);
+  #endif
 
   #if ENABLED(ABL_BILINEAR_SUBDIVISION)
-    #define ABL_GRID_POINTS_VIRT_X (GRID_MAX_CELLS_X * (BILINEAR_SUBDIVISIONS) + 1)
-    #define ABL_GRID_POINTS_VIRT_Y (GRID_MAX_CELLS_Y * (BILINEAR_SUBDIVISIONS) + 1)
+    #define ABL_GRID_POINTS_VIRT_X TERN(DYNAMIC_LEVELING, (GRID_MAX_POINTS_X - 1) * (BILINEAR_SUBDIVISIONS) + 1, GRID_MAX_CELLS_X * (BILINEAR_SUBDIVISIONS) + 1)
+    #define ABL_GRID_POINTS_VIRT_Y TERN(DYNAMIC_LEVELING, (GRID_MAX_POINTS_Y - 1) * (BILINEAR_SUBDIVISIONS) + 1, GRID_MAX_CELLS_Y * (BILINEAR_SUBDIVISIONS) + 1)
+    #if ENABLED(DYNAMIC_LEVELING)
+      #define ABL_MAX_POINTS_VIRT_X (GRID_MAX_CELLS_X * (BILINEAR_SUBDIVISIONS) + 1)
+      #define ABL_MAX_POINTS_VIRT_Y (GRID_MAX_CELLS_Y * (BILINEAR_SUBDIVISIONS) + 1)
+    #endif
 
-    static float z_values_virt[ABL_GRID_POINTS_VIRT_X][ABL_GRID_POINTS_VIRT_Y];
+    static float z_values_virt[TERN(DYNAMIC_LEVELING, ABL_MAX_POINTS_VIRT_X, ABL_GRID_POINTS_VIRT_X)][TERN(DYNAMIC_LEVELING, ABL_MAX_POINTS_VIRT_Y, ABL_GRID_POINTS_VIRT_Y)];
     static xy_pos_t grid_spacing_virt;
     static xy_float_t grid_factor_virt;
+    TERN_(DYNAMIC_LEVELING, static xy_uint_t max_points_virt);
 
     static float virt_coord(const uint8_t x, const uint8_t y);
     static float virt_cmr(const float p[4], const uint8_t i, const float t);
@@ -51,9 +63,12 @@ private:
 
 public:
   static void reset();
-  static void set_grid(const xy_pos_t& _grid_spacing, const xy_pos_t& _grid_start);
+  static void set_grid(const xy_pos_t& _grid_spacing, const xy_pos_t& _grid_start OPTARG(DYNAMIC_LEVELING, const xy_uint8_t& _max_points={ GRID_MAX_POINTS_X, GRID_MAX_POINTS_Y }));
+  #if ENABLED(DYNAMIC_LEVELING)
+    static void extrapolate_one_point(const uint8_t x, const uint8_t y, const int8_t xdir, const int8_t ydir);
+  #endif
   static void extrapolate_unprobed_bed_level();
-  static void print_leveling_grid(const bed_mesh_t *_z_values=nullptr);
+  static void print_leveling_grid(const bed_mesh_t *_z_values=nullptr OPTARG(DYNAMIC_LEVELING, const xy_uint8_t *_grid_points=nullptr));
   static void refresh_bed_level();
   static bool has_mesh() { return !!grid_spacing.x; }
   static bool mesh_is_valid() { return has_mesh(); }

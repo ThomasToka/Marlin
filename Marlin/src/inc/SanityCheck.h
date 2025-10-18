@@ -437,7 +437,7 @@ static_assert(COUNT(arm) == LOGICAL_AXES, "AXIS_RELATIVE_MODES must contain " _L
  * SD File Sorting
  */
 #if ENABLED(SDCARD_SORT_ALPHA)
-  #if NONE(EXTENSIBLE_UI, HAS_MARLINUI_MENU, DWIN_CREALITY_LCD, DWIN_CREALITY_LCD_JYERSUI, DWIN_LCD_PROUI)
+  #if NONE(EXTENSIBLE_UI, HAS_MARLINUI_MENU, DWIN_CREALITY_LCD, DWIN_CREALITY_LCD_JYERSUI, DWIN_LCD_PROUI, E3S1PRO_RTS)
     #error "SDCARD_SORT_ALPHA requires an LCD that supports it. (It doesn't apply to M20, etc.)"
   #elif SDSORT_LIMIT > 256
     #error "SDSORT_LIMIT must be 256 or smaller."
@@ -1547,15 +1547,17 @@ static_assert(NUM_SERVOS <= NUM_SERVO_PLUGS, "NUM_SERVOS (or some servo index) i
     static_assert(PROBING_MARGIN_LEFT  >= 0, "PROBING_MARGIN_LEFT must be >= 0.");
     static_assert(PROBING_MARGIN_RIGHT >= 0, "PROBING_MARGIN_RIGHT must be >= 0.");
   #endif
-  #define _MARGIN(A) TERN(IS_KINEMATIC, PRINTABLE_RADIUS, ((A##_BED_SIZE) / 2))
-  #ifdef PROBING_MARGIN
-    static_assert(PROBING_MARGIN     < _MARGIN(X), "PROBING_MARGIN is too large.");
+  #if DISABLED(E3S1PRO_RTS)  
+    #define _MARGIN(A) TERN(IS_KINEMATIC, PRINTABLE_RADIUS, ((A##_BED_SIZE) / 2))
+    #ifdef PROBING_MARGIN
+      static_assert(PROBING_MARGIN     < _MARGIN(X), "PROBING_MARGIN is too large.");
+    #endif
+    static_assert(PROBING_MARGIN_BACK  < _MARGIN(Y), "PROBING_MARGIN_BACK is too large.");
+    static_assert(PROBING_MARGIN_FRONT < _MARGIN(Y), "PROBING_MARGIN_FRONT is too large.");
+    static_assert(PROBING_MARGIN_LEFT  < _MARGIN(X), "PROBING_MARGIN_LEFT is too large.");
+    static_assert(PROBING_MARGIN_RIGHT < _MARGIN(X), "PROBING_MARGIN_RIGHT is too large.");
+    #undef _MARGIN
   #endif
-  static_assert(PROBING_MARGIN_BACK  < _MARGIN(Y), "PROBING_MARGIN_BACK is too large.");
-  static_assert(PROBING_MARGIN_FRONT < _MARGIN(Y), "PROBING_MARGIN_FRONT is too large.");
-  static_assert(PROBING_MARGIN_LEFT  < _MARGIN(X), "PROBING_MARGIN_LEFT is too large.");
-  static_assert(PROBING_MARGIN_RIGHT < _MARGIN(X), "PROBING_MARGIN_RIGHT is too large.");
-  #undef _MARGIN
 
   /**
    * Check for improper PROBE_OFFSET_[XYZ](MIN|MAX)
@@ -4021,7 +4023,9 @@ static_assert(_PLUS_TEST(3), "DEFAULT_MAX_ACCELERATION values must be positive."
     #elif _PIN_CONFLICT(CASE_LIGHT)
       #error "SPINDLE_LASER_PWM_PIN conflicts with CASE_LIGHT_PIN."
     #elif _PIN_CONFLICT(E0_AUTO_FAN)
-      #error "SPINDLE_LASER_PWM_PIN conflicts with E0_AUTO_FAN_PIN."
+      #if DISABLED(E3S1PRO_RTS)
+        #error "SPINDLE_LASER_PWM_PIN conflicts with E0_AUTO_FAN_PIN."
+      #endif
     #elif _PIN_CONFLICT(E1_AUTO_FAN)
       #error "SPINDLE_LASER_PWM_PIN conflicts with E1_AUTO_FAN_PIN."
     #elif _PIN_CONFLICT(E2_AUTO_FAN)
@@ -4039,7 +4043,9 @@ static_assert(_PLUS_TEST(3), "DEFAULT_MAX_ACCELERATION values must be positive."
     #elif _PIN_CONFLICT(FAN0)
       #error "SPINDLE_LASER_PWM_PIN conflicts with FAN0_PIN."
     #elif _PIN_CONFLICT(FAN1)
-      #error "SPINDLE_LASER_PWM_PIN conflicts with FAN1_PIN."
+      #if DISABLED(E3S1PRO_RTS)
+        #error "SPINDLE_LASER_PWM_PIN conflicts with FAN1_PIN."
+      #endif
     #elif _PIN_CONFLICT(FAN2)
       #error "SPINDLE_LASER_PWM_PIN conflicts with FAN2_PIN."
     #elif _PIN_CONFLICT(FAN3)

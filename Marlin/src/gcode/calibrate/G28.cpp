@@ -64,6 +64,8 @@
   #include "../../lcd/e3v2/creality/dwin.h"
 #elif ENABLED(SOVOL_SV06_RTS)
   #include "../../lcd/sovol_rts/sovol_rts.h"
+#elif ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
 #endif
 
 #if ENABLED(LASER_FEATURE)
@@ -144,7 +146,12 @@
      * Move the Z probe (or just the nozzle) to the safe homing point
      * (Z is already at the right height)
      */
-    constexpr xy_float_t safe_homing_xy = { Z_SAFE_HOMING_X_POINT, Z_SAFE_HOMING_Y_POINT };
+    #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
+      TERN(E3S1PRO_RTS, , constexpr) xy_float_t safe_homing_xy = { Z_SAFE_HOMING_X_POINT, Z_SAFE_HOMING_Y_POINT };
+    #endif
+    #if ENABLED(AUTO_BED_LEVELING_UBL) 
+      constexpr xy_float_t safe_homing_xy = { Z_SAFE_HOMING_X_POINT, Z_SAFE_HOMING_Y_POINT };
+    #endif
     destination.set(safe_homing_xy, current_position.z);
 
     TERN_(HOMING_Z_WITH_PROBE, destination -= probe.offset_xy);
@@ -254,6 +261,7 @@ void GcodeSuite::G28() {
     set_and_report_grblstate(M_HOMING);
   #endif
 
+  TERN_(E3S1PRO_RTS, home_flag = true);
   TERN_(DWIN_CREALITY_LCD, dwinHomingStart());
   TERN_(EXTENSIBLE_UI, ExtUI::onHomingStart());
 
@@ -578,10 +586,19 @@ void GcodeSuite::G28() {
   TERN_(SOVOL_SV06_RTS, RTS_MoveAxisHoming());
   TERN_(DWIN_CREALITY_LCD, dwinHomingDone());
   TERN_(EXTENSIBLE_UI, ExtUI::onHomingDone());
+  TERN_(E3S1PRO_RTS, RTS_MoveAxisHoming());
+  TERN_(E3S1PRO_RTS, RTS_ShowMotorFreeIcon(false));  
+  TERN_(E3S1PRO_RTS, home_flag  = false;);
 
   report_current_position();
 
   TERN_(FULL_REPORT_TO_HOST_FEATURE, set_and_report_grblstate(old_grblstate));
+  #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
+    if(laser_device.is_laser_device()){
+      do_blocking_move_to_xy(0, 10, homing_feedrate(X_AXIS));
+      sync_plan_position();
+    }
+  #endif
 
   #ifdef EVENT_GCODE_AFTER_HOMING
     gcode.process_subcommands_now(F(EVENT_GCODE_AFTER_HOMING));

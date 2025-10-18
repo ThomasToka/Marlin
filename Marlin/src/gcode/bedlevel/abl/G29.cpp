@@ -52,6 +52,10 @@
   #include "../../../lcd/extui/ui_api.h"
 #elif ENABLED(DWIN_CREALITY_LCD)
   #include "../../../lcd/e3v2/creality/dwin.h"
+#elif ENABLED(E3S1PRO_RTS)
+  #include "../../../lcd/rts/e3s1pro/lcd_rts.h"
+  #include "../../../module/stepper.h"
+  #include "../../../module/settings.h"
 #elif ENABLED(SOVOL_SV06_RTS)
   #include "../../../lcd/sovol_rts/sovol_rts.h"
 #endif
@@ -117,7 +121,11 @@ public:
   #elif ENABLED(AUTO_BED_LEVELING_3POINT)
     static constexpr grid_count_t abl_points = 3;
   #elif ABL_USES_GRID
-    static constexpr grid_count_t abl_points = GRID_MAX_POINTS;
+    #if ENABLED(DYNAMIC_LEVELING)
+      grid_count_t abl_points = GRID_USED_POINTS;
+    #else
+      static constexpr grid_count_t abl_points = GRID_MAX_POINTS;
+    #endif
   #endif
 
   #if ABL_USES_GRID
@@ -133,7 +141,11 @@ public:
       bool                topography_map;
       xy_uint8_t          grid_points;
     #else // Bilinear
-      static constexpr xy_uint8_t grid_points = { GRID_MAX_POINTS_X, GRID_MAX_POINTS_Y };
+      #if ENABLED(DYNAMIC_LEVELING)
+        xy_uint8_t grid_points = { lcd_rts_settings.max_points, lcd_rts_settings.max_points };
+      #else
+        static constexpr xy_uint8_t grid_points = { GRID_MAX_POINTS_X, GRID_MAX_POINTS_Y };
+      #endif
     #endif
 
     #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
@@ -151,8 +163,10 @@ public:
 };
 
 #if ABL_USES_GRID && ANY(AUTO_BED_LEVELING_3POINT, AUTO_BED_LEVELING_BILINEAR)
-  constexpr xy_uint8_t G29_State::grid_points;
-  constexpr grid_count_t G29_State::abl_points;
+  #if DISABLED(DYNAMIC_LEVELING)
+    constexpr xy_uint8_t G29_State::grid_points;
+    constexpr grid_count_t G29_State::abl_points;
+  #endif
 #endif
 
 /**
@@ -226,6 +240,14 @@ public:
 G29_TYPE GcodeSuite::G29() {
 
   DEBUG_SECTION(log_G29, "G29", DEBUGGING(LEVELING));
+
+  #if ENABLED(E3S1PRO_RTS)
+    if (printingIsActive() && leveling_running == 0) {
+      RTS_ResetMesh();
+      rtscheck.RTS_ChangeLevelingPage();
+    }
+    leveling_running = 1;
+  #endif
 
   // Leveling state is persistent when done manually with multiple G29 commands
   TERN_(PROBE_MANUALLY, static) G29_State abl;
@@ -303,7 +325,11 @@ G29_TYPE GcodeSuite::G29() {
       const bool seen_w = parser.seen_test('W');
       if (seen_w) {
         if (!leveling_is_valid()) {
-          SERIAL_ERROR_MSG("No bilinear grid");
+          #if ENABLED(E3S1PRO_RTS)
+            SERIAL_ERROR_MSG("No mesh");
+          #else
+            SERIAL_ERROR_MSG("No bilinear grid");
+          #endif
           G29_RETURN(false, false);
         }
 
@@ -324,13 +350,13 @@ G29_TYPE GcodeSuite::G29() {
           // Get nearest i / j from rx / ry
           i = (rx - bedlevel.grid_start.x) / bedlevel.grid_spacing.x + 0.5f;
           j = (ry - bedlevel.grid_start.y) / bedlevel.grid_spacing.y + 0.5f;
-          LIMIT(i, 0, (GRID_MAX_POINTS_X) - 1);
-          LIMIT(j, 0, (GRID_MAX_POINTS_Y) - 1);
+          LIMIT(i, 0, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.max_points, GRID_MAX_POINTS_X)) - 1);
+          LIMIT(j, 0, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.max_points, GRID_MAX_POINTS_Y)) - 1);
         }
 
         #pragma GCC diagnostic pop
 
-        if (WITHIN(i, 0, (GRID_MAX_POINTS_X) - 1) && WITHIN(j, 0, (GRID_MAX_POINTS_Y) - 1)) {
+        if (WITHIN(i, 0, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.max_points, GRID_MAX_POINTS_X)) - 1) && WITHIN(j, 0, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.max_points, GRID_MAX_POINTS_Y)) - 1)) {
           set_bed_leveling_enabled(false);
           bedlevel.z_values[i][j] = rz;
           bedlevel.refresh_bed_level();
@@ -372,17 +398,17 @@ G29_TYPE GcodeSuite::G29() {
       // X and Y specify points in each direction, overriding the default
       // These values may be saved with the completed mesh
       abl.grid_points.set(
-        parser.byteval('X', GRID_MAX_POINTS_X),
-        parser.byteval('Y', GRID_MAX_POINTS_Y)
+        parser.byteval('X', TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X)),
+        parser.byteval('Y', TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_Y, GRID_MAX_POINTS_Y))
       );
       if (parser.seenval('P')) abl.grid_points.x = abl.grid_points.y = parser.value_int();
 
-      if (!WITHIN(abl.grid_points.x, 2, GRID_MAX_POINTS_X)) {
-        SERIAL_ECHOLNPGM(GCODE_ERR_MSG("Probe points (X) implausible (2-" STRINGIFY(GRID_MAX_POINTS_X) ")."));
+      if (!WITHIN(abl.grid_points.x, 2, TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X))) {
+        SERIAL_ECHOLNPGM(GCODE_ERR_MSG("Probe points (X) implausible (2-" STRINGIFY(TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X)) ")."));
         G29_RETURN(false, false);
       }
-      if (!WITHIN(abl.grid_points.y, 2, GRID_MAX_POINTS_Y)) {
-        SERIAL_ECHOLNPGM(GCODE_ERR_MSG("Probe points (Y) implausible (2-" STRINGIFY(GRID_MAX_POINTS_Y) ")."));
+      if (!WITHIN(abl.grid_points.y, 2, TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_Y, GRID_MAX_POINTS_Y))) {
+        SERIAL_ECHOLNPGM(GCODE_ERR_MSG("Probe points (Y) implausible (2-" STRINGIFY(TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_Y, GRID_MAX_POINTS_Y)) ")."));
         G29_RETURN(false, false);
       }
 
@@ -674,10 +700,17 @@ G29_TYPE GcodeSuite::G29() {
     #if ABL_USES_GRID
 
       bool zig = PR_OUTER_SIZE & 1;  // Always end at RIGHT and BACK_PROBE_BED_POSITION
+      #if ENABLED(E3S1PRO_RTS)
+        uint8_t showcount = 0;
+      #endif
 
       // Outer loop is X with PROBE_Y_FIRST enabled
       // Outer loop is Y with PROBE_Y_FIRST disabled
-      for (PR_OUTER_VAR = 0; PR_OUTER_VAR < PR_OUTER_SIZE && !isnan(abl.measured_z); PR_OUTER_VAR++) {
+      #if ENABLED(E3S1PRO_RTS)
+        for (PR_OUTER_VAR = 0, showcount = 0; PR_OUTER_VAR < PR_OUTER_SIZE && !isnan(abl.measured_z); PR_OUTER_VAR++) {      
+      #else
+        for (PR_OUTER_VAR = 0; PR_OUTER_VAR < PR_OUTER_SIZE && !isnan(abl.measured_z); PR_OUTER_VAR++) {
+      #endif
 
         int8_t inStart, inStop, inInc;
 
@@ -798,6 +831,12 @@ G29_TYPE GcodeSuite::G29() {
               if (pt_index <= GRID_MAX_POINTS) rts.sendData(pt_index, AUTO_BED_LEVEL_ICON_VP);
               rts.sendData(z * 100.0f, AUTO_BED_LEVEL_1POINT_VP + (pt_index - 1) * 2);
               rts.gotoPage(ID_ABL_Wait_L, ID_ABL_Wait_D);
+            #elif ENABLED(E3S1PRO_RTS)
+              rtscheck.RTS_SndData(showcount + 1, AUTO_BED_LEVEL_CUR_POINT_VP);
+              rtscheck.RTS_SndData(z*1000, AUTO_BED_LEVEL_1POINT_NEW_VP + showcount * 2);
+              rtscheck.RTS_SndData((unsigned long)0x073F, TrammingpointNature + (color_sp_offset + showcount + 1) * 16);
+              showcount ++;
+              rtscheck.RTS_ChangeLevelingPage();
             #endif
 
           #endif
@@ -871,12 +910,11 @@ G29_TYPE GcodeSuite::G29() {
       if (abl.dryrun)
         bedlevel.print_leveling_grid(&abl.z_values);
       else {
-        bedlevel.set_grid(abl.gridSpacing, abl.probe_position_lf);
+        bedlevel.set_grid(abl.gridSpacing, abl.probe_position_lf OPTARG(DYNAMIC_LEVELING, abl.grid_points));
         COPY(bedlevel.z_values, abl.z_values);
         TERN_(IS_KINEMATIC, bedlevel.extrapolate_unprobed_bed_level());
         bedlevel.refresh_bed_level();
-
-        bedlevel.print_leveling_grid();
+        bedlevel.print_leveling_grid(nullptr OPTARG(DYNAMIC_LEVELING, &bedlevel.max_points));
       }
 
     #elif ENABLED(AUTO_BED_LEVELING_LINEAR)
@@ -1017,11 +1055,25 @@ G29_TYPE GcodeSuite::G29() {
     process_subcommands_now(F(EVENT_GCODE_AFTER_G29));
   #endif
 
+  #if ENABLED(E3S1PRO_RTS)
+    queue.enqueue_one_P(PSTR("M500"));
+    leveling_running = 0;
+    if (printingIsActive()){
+      RTS_LoadMesh();
+      delay(500);      
+      RTS_ShowPage(10);
+    }else{
+      RTS_AutoBedLevelPage();
+    }
+  #endif
   TERN_(SOVOL_SV06_RTS, RTS_AutoBedLevelPage());
 
   probe.use_probing_tool(false);
 
   report_current_position();
+  #if ENABLED(E3S1PRO_RTS)
+    TERN_(FULL_REPORT_TO_HOST_FEATURE, set_and_report_grblstate(M_IDLE));
+  #endif
 
   G29_RETURN(isnan(abl.measured_z), true);
 }

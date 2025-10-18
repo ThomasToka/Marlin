@@ -1977,7 +1977,11 @@ void prepare_line_to_destination() {
     uint8_t hbd = pgm_read_byte(&homing_bump_divisor[axis]);
     if (hbd < 1) {
       hbd = 10;
-      SERIAL_ECHO_MSG("Warning: Homing Bump Divisor < 1");
+      #if ENABLED(E3S1PRO_RTS)
+        SERIAL_ECHO_MSG("Warning: HBD < 1");
+      #else
+        SERIAL_ECHO_MSG("Warning: Homing Bump Divisor < 1");
+      #endif
     }
     return homing_feedrate(axis) / float(hbd);
   }

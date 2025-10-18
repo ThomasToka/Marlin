@@ -37,6 +37,10 @@
   #include "../../../lcd/extui/ui_api.h"
 #elif ENABLED(DWIN_CREALITY_LCD)
   #include "../../../lcd/e3v2/creality/dwin.h"
+#elif ENABLED(E3S1PRO_RTS)
+  #include "../../../lcd/rts/e3s1pro/lcd_rts.h"
+  #include "../../gcode.h"
+  #include "../../../module/printcounter.h"
 #elif ENABLED(DWIN_CREALITY_LCD_JYERSUI)
   #include "../../../lcd/e3v2/jyersui/dwin.h" // Temporary fix until it can be better implemented
 #endif
@@ -74,6 +78,11 @@ void GcodeSuite::M1000() {
     if (!force_resume && parser.seen_test('S')) {
       #if HAS_MARLINUI_MENU
         ui.goto_screen(menu_job_recovery);
+      #elif ENABLED(E3S1PRO_RTS)
+        recovery.info.print_job_elapsed = print_job_timer.duration() + recovery.info.print_job_elapsed;    
+        //temphot = thermalManager.temp_hotend[0].target;
+        RTS_ShowPage(27);
+        sdcard_pause_check = true;    
       #elif ENABLED(EXTENSIBLE_UI)
         ExtUI::onPowerLossResume();
       #elif HAS_PLR_UI_FLAG

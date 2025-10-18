@@ -33,6 +33,10 @@
   #include "../../feature/bltouch.h"
 #endif
 
+#if ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"  
+#endif
+
 #define DEBUG_OUT ENABLED(DEBUG_LEVELING_FEATURE)
 #include "../../core/debug_out.h"
 
@@ -41,6 +45,18 @@
 //
 
 #include "../../feature/tramming.h"
+#if ENABLED(DYNAMIC_TRAMMING)
+  void updateTrammingPoints() {
+      tramming_points[0].x = lcd_rts_settings.probe_margin_x;
+      tramming_points[0].y = lcd_rts_settings.probe_margin_y_front;
+      tramming_points[1].x = X_BED_SIZE - lcd_rts_settings.probe_margin_x;
+      tramming_points[1].y = lcd_rts_settings.probe_margin_y_front;
+      tramming_points[2].x = lcd_rts_settings.probe_margin_x;
+      tramming_points[2].y = Y_BED_SIZE - lcd_rts_settings.probe_margin_y_back;
+      tramming_points[3].x = X_BED_SIZE - lcd_rts_settings.probe_margin_x;
+      tramming_points[3].y = Y_BED_SIZE - lcd_rts_settings.probe_margin_y_back;
+  }
+#endif
 
 /**
  * G35: Read bed corners to help adjust bed screws
@@ -59,6 +75,10 @@ void GcodeSuite::G35() {
   DEBUG_SECTION(log_G35, "G35", DEBUGGING(LEVELING));
 
   if (DEBUGGING(LEVELING)) log_machine_info();
+
+  #if ENABLED(DYNAMIC_TRAMMING)
+    updateTrammingPoints();
+  #endif
 
   float z_measured[G35_PROBE_COUNT] = { 0 };
 
@@ -91,6 +111,10 @@ void GcodeSuite::G35() {
 
   bool err_break = false;
 
+  #if ENABLED(DYNAMIC_TRAMMING)
+    bool probed_points[G35_PROBE_COUNT] = {false};
+  #endif
+
   // Probe all positions
   for (uint8_t i = 0; i < G35_PROBE_COUNT; ++i) {
     const float z_probed_height = probe.probe_at_point(tramming_points[i], PROBE_PT_RAISE);
@@ -113,6 +137,12 @@ void GcodeSuite::G35() {
       );
     }
 
+    #if ENABLED(E3S1PRO_RTS)    
+      rtscheck.RTS_SndData(z_probed_height * 1000, ASSISTED_TRAMMING_POINT_1_VP + i);
+    #endif
+    #if ENABLED(DYNAMIC_TRAMMING)
+      probed_points[i] = true; // Mark this point as probed
+    #endif
     z_measured[i] = z_probed_height;
   }
 
@@ -121,6 +151,9 @@ void GcodeSuite::G35() {
 
     // Calculate adjusts
     for (uint8_t i = 1; i < G35_PROBE_COUNT; ++i) {
+      #if ENABLED(DYNAMIC_TRAMMING)
+        if (!probed_points[i]) continue; // Skip points that were not probed
+      #endif
       const float diff = z_measured[0] - z_measured[i],
                   adjust = ABS(diff) < 0.001f ? 0 : diff / threads_factor[(screw_thread - 30) / 10];
 
@@ -128,14 +161,37 @@ void GcodeSuite::G35() {
       const float decimal_part = adjust - float(full_turns);
       const int minutes = trunc(decimal_part * 60.0f);
 
-      SERIAL_ECHOPGM("Turn ");
-      SERIAL_ECHOPGM_P((char *)pgm_read_ptr(&tramming_point_name[i]));
-      SERIAL_ECHOPGM(" ", (screw_thread & 1) == (adjust > 0) ? "CCW" : "CW", " by ", ABS(full_turns), " turns");
-      if (minutes) SERIAL_ECHOPGM(" and ", ABS(minutes), " minutes");
-      if (ENABLED(REPORT_TRAMMING_MM)) SERIAL_ECHOPGM(" (", -diff, "mm)");
-      SERIAL_EOL();
+      #if DISABLED(E3S1PRO_RTS)
+        SERIAL_ECHOPGM("Turn ");
+        SERIAL_ECHOPGM_P((char *)pgm_read_ptr(&tramming_point_name[i]));
+        SERIAL_ECHOPGM(" ", (screw_thread & 1) == (adjust > 0) ? "CCW" : "CW", " by ", ABS(full_turns), " turns");
+        if (minutes) SERIAL_ECHOPGM(" and ", ABS(minutes), " minutes");
+        if (ENABLED(REPORT_TRAMMING_MM)) SERIAL_ECHOPGM(" (", -diff, "mm)");
+        SERIAL_EOL();
+      #endif
+      #if ENABLED(E3S1PRO_RTS)
+        char turns[4];
+        char mins[4];
+        itoa(ABS(full_turns), turns, 10);
+        itoa(ABS(minutes), mins, 10);
+        char str[26];
+        strcpy(str, (screw_thread & 1) == (adjust > 0) ? "DOWN " : "UP ");
+        strcat(str, turns);
+        strcat(str, " turns & ");
+        strcat(str, mins);
+        strcat(str, " mins");
+        unsigned long addr = ASSISTED_TRAMMING_POINT_TEXT_VP + i * 26;
+        for(int j = 0; j < 26; j++) {
+          RTS_ResetSingleVP(addr + j);
+        }
+        rtscheck.RTS_SndData(str, addr);
+      #endif
     }
-  }
+    #if ENABLED(E3S1PRO_RTS)    
+      leveling_running = 0;
+      RTS_ShowPage(98);
+    #endif
+  } 
   else
     SERIAL_ECHOLNPGM("G35 aborted.");
 

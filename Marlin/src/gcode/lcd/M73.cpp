@@ -29,6 +29,10 @@
 #include "../../sd/cardreader.h"
 #include "../../libs/numtostr.h"
 
+#if ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"
+#endif
+
 /**
  * M73: Set Print Progress
  *
@@ -54,20 +58,60 @@
  */
 void GcodeSuite::M73() {
 
-  #if ENABLED(SET_PROGRESS_PERCENT)
-    if (parser.seenval('P'))
-      ui.set_progress((PROGRESS_SCALE) > 1
-        ? parser.value_float() * (PROGRESS_SCALE)
-        : parser.value_byte()
-      );
-  #endif
+  uint16_t last_remaining_time = 0;
+  uint16_t last_progress_percent = 0;
 
-  #if ENABLED(SET_REMAINING_TIME)
-    if (parser.seenval('R')) ui.set_remaining_time(60 * parser.value_ulong());
-  #endif
+  #if ENABLED(DWIN_LCD_PROUI)
 
-  #if ENABLED(SET_INTERACTION_TIME)
-    if (parser.seenval('C')) ui.set_interaction_time(60 * parser.value_ulong());
+    DWIN_M73();
+
+  #else
+
+    #if ENABLED(SET_PROGRESS_PERCENT)
+      if (parser.seenval('P')){
+        #if ENABLED(E3S1PRO_RTS)
+          if (parser.value_byte() == 0)
+            last_start_time = HAL_GetTick();
+        #endif
+        if(!lcd_rts_settings.external_m73){ 
+          ui.set_progress((PROGRESS_SCALE) > 1
+            ? parser.value_float() * (PROGRESS_SCALE)
+            : parser.value_byte()
+          );
+        }
+        if(lcd_rts_settings.external_m73){             
+          last_progress_percent = (unsigned char)((PROGRESS_SCALE) > 1
+            ? parser.value_float() * (PROGRESS_SCALE)
+            : parser.value_byte()
+          );
+          RTS_SendProgress(last_progress_percent);
+          duration_t elapsed = print_job_timer.duration();
+          rtscheck.RTS_SndData(elapsed.value / 3600, PRINT_TIME_HOUR_VP);
+          rtscheck.RTS_SndData((elapsed.value % 3600) / 60, PRINT_TIME_MIN_VP);
+        }
+      }
+    #endif
+
+    #if ENABLED(SET_REMAINING_TIME)
+
+      if (parser.seenval('R')){
+        if(!lcd_rts_settings.external_m73){
+          ui.set_remaining_time(60 * parser.value_int());
+        }
+      }
+      if(lcd_rts_settings.external_m73){ 
+        if (parser.seenval('R')) {
+          last_remaining_time = 60 * parser.value_int();
+          rtscheck.RTS_SndData(last_remaining_time / 3600, PRINT_REMAIN_TIME_HOUR_VP);
+          rtscheck.RTS_SndData((last_remaining_time % 3600) / 60, PRINT_REMAIN_TIME_MIN_VP);
+        }      
+      }
+    #endif
+
+    #if ENABLED(SET_INTERACTION_TIME)
+      if (parser.seenval('C')) ui.set_interaction_time(60 * parser.value_ulong());
+    #endif
+  
   #endif
 
   #if ENABLED(M73_REPORT)

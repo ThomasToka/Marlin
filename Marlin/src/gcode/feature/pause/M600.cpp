@@ -32,6 +32,9 @@
 #include "../../../lcd/marlinui.h"
 #if ENABLED(SOVOL_SV06_RTS)
   #include "../../../lcd/sovol_rts/sovol_rts.h"
+#elif ENABLED(E3S1PRO_RTS)
+  #include "../../../module/temperature.h"
+  #include "../../../lcd/rts/e3s1pro/lcd_rts.h"  
 #endif
 
 #if HAS_MULTI_EXTRUDER
@@ -182,7 +185,28 @@ void GcodeSuite::M600() {
         const bool automatic = parser.seen_test('A');
         mmu2_M600(automatic);
         resume_print(0, 0, 0, beep_count, 0, !automatic, false DXC_PASS);
+      #else
+        wait_for_confirmation(true, beep_count DXC_PASS);
+        if (card.flag.abort_sd_printing) 
+        {
+          // SERIAL_ECHOLNPAIR("\r\nbread....");
+          // Re-enable the heaters if they timed out
+          bool nozzle_timed_out = false;
+          HOTEND_LOOP()
+          {
+            nozzle_timed_out |= thermalManager.heater_idle[e].timed_out;
+            thermalManager.reset_hotend_idle_timer(e);
+          }
+          return;
+        }
+        else
+        {
+          // SERIAL_ECHOLNPAIR("\r\nresume_print....");
+          resume_print(unload_length, unload_length, ADVANCED_PAUSE_PURGE_LENGTH,
+                      beep_count, (parser.seenval('R') ? parser.value_celsius() : 0)DXC_PASS);
+        }
       #endif
+
     }
   }
 

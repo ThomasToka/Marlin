@@ -30,6 +30,10 @@
 #include "../../feature/bedlevel/bedlevel.h"
 #include "../../lcd/marlinui.h"
 
+#if ENABLED(E3S1PRO_RTS)
+  #include "../../lcd/rts/e3s1pro/lcd_rts.h"  
+#endif
+
 #if HAS_PTC
   #include "../../feature/probe_temp_comp.h"
 #endif
@@ -98,6 +102,34 @@ void GcodeSuite::G30() {
         F(  " Z:"), p_float_t(measured_z, 3)
       );
       msg.echoln();
+      #if ALL(E3S1PRO_RTS, DYNAMIC_TRAMMING)
+        struct TrammingPoint {
+          float x;
+          float y;
+          int vp;
+        };
+        // Create an array of TrammingPoint objects for all ten points
+        TrammingPoint trammingPoints[10] = {
+          // Center definition
+          {117.50, 117.50, CRTOUCH_TRAMMING_POINT_1_VP},
+          {155.00, 155.00, CRTOUCH_TRAMMING_POINT_1_VP},
+        };
+        trammingPoints[2] = {static_cast<float>(lcd_rts_settings.probe_margin_x), static_cast<float>(lcd_rts_settings.probe_margin_y_front), CRTOUCH_TRAMMING_POINT_1_VP + 5};
+        trammingPoints[3] = {(X_BED_SIZE - static_cast<float>(lcd_rts_settings.probe_margin_x)), static_cast<float>(lcd_rts_settings.probe_margin_y_front), CRTOUCH_TRAMMING_POINT_1_VP + 6};
+        trammingPoints[4] = {static_cast<float>(lcd_rts_settings.probe_margin_x), (Y_BED_SIZE - static_cast<float>(lcd_rts_settings.probe_margin_y_back)), CRTOUCH_TRAMMING_POINT_1_VP + 7};
+        trammingPoints[5] = {(X_BED_SIZE - static_cast<float>(lcd_rts_settings.probe_margin_x)), (Y_BED_SIZE - static_cast<float>(lcd_rts_settings.probe_margin_y_back)), CRTOUCH_TRAMMING_POINT_1_VP + 8};
+        int POINTS[10] = {0};
+        for (int i = 0; i < 10; i++) {
+          const auto& point = trammingPoints[i];
+          if (probepos.x == point.x && probepos.y == point.y) {
+            rtscheck.RTS_SndData(measured_z * 1000, point.vp);
+            POINTS[i] = 1;
+          }
+        }
+        if (POINTS[0] == 1 || POINTS[1] == 1) {
+          leveling_running = 0;
+        }
+      #endif
       TERN_(VERBOSE_SINGLE_PROBE, ui.set_status(msg));
     }
 
