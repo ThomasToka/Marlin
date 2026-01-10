@@ -465,7 +465,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       else if(recdat.data[0] == 3)
       {
         // queue.inject_P(PSTR("M108"));
-        wait_for_user = false;
+        marlin.user_resume();
         // runout.filament_ran_out = false;
         //runout.reset();
 
@@ -1363,11 +1363,11 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       {
         if(recdat.data[0] == 1)
         {
-          if(printingIsActive())
+          if(marlin.printingIsActive())
           {
             RTS_ShowPage(10);
           }
-          else if(printingIsPaused())
+          else if(marlin.printingIsPaused())
           {
             RTS_ShowPage(12);
           }
@@ -1477,7 +1477,7 @@ void EachMomentUpdateLaser(void)
         RTS_SendCurrentPosition(3);
       }
 
-      if(pause_action_flag && (false == sdcard_pause_check) && printingIsPaused() && !planner.has_blocks_queued())
+      if(pause_action_flag && (false == sdcard_pause_check) && marlin.printingIsPaused() && !planner.has_blocks_queued())
       {
         pause_action_flag = false;
         //queue.enqueue_now_P(PSTR("G0 F3000 X0 Y0"));
@@ -1503,7 +1503,7 @@ void EachMomentUpdateLaser(void)
         }
       #endif
 
-      if( marlin_state == MarlinState::MF_RUNNING && first_start_laser == true)
+      if( marlin.is(MarlinState::MF_RUNNING) && first_start_laser == true)
       {
         char str_1[7],cmd[20]={0};
         first_start_laser = false;

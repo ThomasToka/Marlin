@@ -817,7 +817,7 @@ void unified_bed_leveling::shift_mesh_height(const float zoffs) {
     
     #if ENABLED(E3S1PRO_RTS)
       int16_t point_num_real;
-      if (printingIsActive() && leveling_running == 0) {
+      if (marlin.printingIsActive() && leveling_running == 0) {
         RTS_ResetMesh();
         rtscheck.RTS_ChangeLevelingPage();
       }      
@@ -919,7 +919,7 @@ void unified_bed_leveling::shift_mesh_height(const float zoffs) {
 
     #if ENABLED(E3S1PRO_RTS)
       leveling_running = 0;
-      if (printingIsActive()){
+      if (marlin.printingIsActive()){
         RTS_LoadMesh();
         delay(500);
         RTS_ShowPage(10);

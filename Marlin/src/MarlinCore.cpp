@@ -428,7 +428,7 @@ void Marlin::startOrResumeJob() {
       quickstop_stepper();
       print_job_timer.abort();
       laser_device.quick_stop();
-      wait_for_heatup = false;
+      marlin.end_waiting();
       TERN_(POWER_LOSS_RECOVERY, recovery.purge());
       #ifdef EVENT_GCODE_SD_ABORT_LASER
         queue.inject(F(EVENT_GCODE_SD_ABORT_LASER));

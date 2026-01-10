@@ -242,7 +242,7 @@ G29_TYPE GcodeSuite::G29() {
   DEBUG_SECTION(log_G29, "G29", DEBUGGING(LEVELING));
 
   #if ENABLED(E3S1PRO_RTS)
-    if (printingIsActive() && leveling_running == 0) {
+    if (marlin.printingIsActive() && leveling_running == 0) {
       RTS_ResetMesh();
       rtscheck.RTS_ChangeLevelingPage();
     }
@@ -1058,7 +1058,7 @@ G29_TYPE GcodeSuite::G29() {
   #if ENABLED(E3S1PRO_RTS)
     queue.enqueue_one_P(PSTR("M500"));
     leveling_running = 0;
-    if (printingIsActive()){
+    if (marlin.printingIsActive()){
       RTS_LoadMesh();
       delay(500);      
       RTS_ShowPage(10);

@@ -112,13 +112,13 @@ constexpr float default_max_acceleration[]    = DEFAULT_MAX_ACCELERATION;
 constexpr float default_max_jerk[]            = { DEFAULT_XJERK, DEFAULT_YJERK, DEFAULT_ZJERK, DEFAULT_EJERK };
 constexpr float default_axis_steps_per_unit[] = DEFAULT_AXIS_STEPS_PER_UNIT;
 
-float default_nozzle_ptemp = DEFAULT_Kp;
-float default_nozzle_itemp = DEFAULT_Ki;
-float default_nozzle_dtemp = DEFAULT_Kd;
+float default_nozzle_ptemp = DEFAULT_KP;
+float default_nozzle_itemp = DEFAULT_KI;
+float default_nozzle_dtemp = DEFAULT_KD;
 
-float default_hotbed_ptemp = DEFAULT_bedKp;
-float default_hotbed_itemp = DEFAULT_bedKi;
-float default_hotbed_dtemp = DEFAULT_bedKd;
+float default_hotbed_ptemp = DEFAULT_BED_KP;
+float default_hotbed_itemp = DEFAULT_BED_KI;
+float default_hotbed_dtemp = DEFAULT_BED_KD;
 
 uint8_t startprogress;
 
@@ -550,7 +550,7 @@ void RTSSHOW::RTS_SDcard_Stop(void)
   RTS_ResetHeadAndBedSetTemp();
   temphot = 0;
   thermalManager.zero_fan_speeds();
-  wait_for_heatup = wait_for_user = false;
+  marlin.end_waiting();
   PoweroffContinue = false;
   TERN_(POWER_LOSS_RECOVERY, if (card.flag.mounted) card.removeJobRecoveryFile());
   delay(2);
@@ -1311,7 +1311,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 2)
       {
-        if(printingIsActive())
+        if(marlin.printingIsActive())
         {
           RTS_ShowPage(10);
         }
@@ -1380,7 +1380,7 @@ void RTSSHOW::RTS_HandleData(void)
         Update_Time_Value = 0;
         temphot = 0;
         runout.reset();
-        wait_for_user = false;
+        marlin.user_resume();
         RTS_ShowPreviewImage(true);
         RTS_SDcard_Stop();
         queue.clear();
@@ -1413,14 +1413,14 @@ void RTSSHOW::RTS_HandleData(void)
             // delay(10);
             while(planner.has_blocks_queued())
             {
-              idle();
+              marlin.idle();
             }
             RTS_ResetHotendBed();
             thermalManager.zero_fan_speeds();
             while(thermalManager.temp_hotend[0].target > 0)
             {
               thermalManager.setTargetHotend(0, 0);
-              idle();
+              marlin.idle();
             }
             RTS_SDcard_Stop();
             Update_Time_Value = 0;
@@ -1452,14 +1452,14 @@ void RTSSHOW::RTS_HandleData(void)
             // delay(10);
             while(planner.has_blocks_queued())
             {
-              idle();
+              marlin.idle();
             }
             RTS_ResetHotendBed();
             thermalManager.zero_fan_speeds();
             while(thermalManager.temp_hotend[0].target > 0)
             {
               thermalManager.setTargetHotend(0, 0);
-              idle();
+              marlin.idle();
             }
             RTS_SDcard_Stop();
             PoweroffContinue = false;
@@ -1473,7 +1473,7 @@ void RTSSHOW::RTS_HandleData(void)
     case PausePrintKey:
       if(recdat.data[0] == 1)
       { // Site 59
-        if(printingIsActive() && (thermalManager.temp_hotend[0].celsius > (thermalManager.temp_hotend[0].target - 5)) && (thermalManager.temp_bed.celsius > (thermalManager.temp_bed.target - 3)))
+        if(marlin.printingIsActive() && (thermalManager.temp_hotend[0].celsius > (thermalManager.temp_hotend[0].target - 5)) && (thermalManager.temp_bed.celsius > (thermalManager.temp_bed.target - 3)))
         {
           RTS_SndData(runout.enabled ? 101 : 102, FILAMENT_CONTROL_ICON_VP);
           RTS_ShowPage(11);
@@ -1486,7 +1486,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 2)
       { // Sites 11,62
-        if(printingIsActive() && (thermalManager.temp_hotend[0].celsius > (thermalManager.temp_hotend[0].target - 5)) && (thermalManager.temp_bed.celsius > (thermalManager.temp_bed.target - 3)))
+        if(marlin.printingIsActive() && (thermalManager.temp_hotend[0].celsius > (thermalManager.temp_hotend[0].target - 5)) && (thermalManager.temp_bed.celsius > (thermalManager.temp_bed.target - 3)))
         {
         }
         else 
@@ -1506,7 +1506,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 3)
       { // Site 58
-        if(printingIsActive())
+        if(marlin.printingIsActive())
         {
           RTS_LoadMainsiteIcons();
           RTS_ShowPage(10);
@@ -1533,9 +1533,9 @@ void RTSSHOW::RTS_HandleData(void)
         RTS_ShowPage(10);
 
         #if ENABLED(HAS_RESUME_CONTINUE)
-          if(wait_for_user)
+          if(marlin.wait_for_user)
           {
-            wait_for_user = false;
+            marlin.user_resume();
           }
           else
         #endif
@@ -1734,7 +1734,7 @@ void RTSSHOW::RTS_HandleData(void)
     }
 
     case TempControlKey: // 
-      if (!printingIsActive() && !planner.has_blocks_queued()) { 
+      if (!marlin.printingIsActive() && !planner.has_blocks_queued()) { 
         if(recdat.data[0] == 2)
         {
           RTS_ShowPage(20);
@@ -1820,7 +1820,7 @@ void RTSSHOW::RTS_HandleData(void)
       break;
 
     case CoolDownKey:
-      if (!printingIsActive() && !planner.has_blocks_queued()) { 
+      if (!marlin.printingIsActive() && !planner.has_blocks_queued()) { 
         if(recdat.data[0] == 1)
         {
           RTS_ResetHotendBed();
@@ -1906,7 +1906,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 6)
       {
-        if (leveling_running == 0 && !planner.has_blocks_queued() && !printingIsActive()) {        
+        if (leveling_running == 0 && !planner.has_blocks_queued() && !marlin.printingIsActive()) {        
           queue.enqueue_now_P(PSTR("M84"));
           queue.enqueue_now_P(PSTR("G92.9Z0"));
           RTS_ShowMotorFreeIcon(true);
@@ -1964,7 +1964,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 0xF)
       {
-        if(!printingIsActive() && leveling_running == 0){
+        if(!marlin.printingIsActive() && leveling_running == 0){
           RTS_ShowPage(21);
           //settings.save();
           delay(100);
@@ -2034,7 +2034,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 4)
       {
-        if(!planner.has_blocks_queued() && !printingIsActive())
+        if(!planner.has_blocks_queued() && !marlin.printingIsActive())
         {
           bltouch_tramming = 0;            
 	        RTS_ShowPage(25);
@@ -2349,7 +2349,7 @@ void RTSSHOW::RTS_HandleData(void)
       }    
       else if (recdat.data[0] == 163)
       { // 00A3 // Start Autoleveling // Site 81,94,95
-        if(!printingIsActive() && leveling_running == 0){
+        if(!marlin.printingIsActive() && leveling_running == 0){
           #if ENABLED(BLTOUCH)
             RTS_SndData(lang + 10, AUTO_LEVELING_START_TITLE_VP);
             RTS_G28MoveOne();
@@ -2511,7 +2511,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 6)
       {
-        if (leveling_running == 0 && !planner.has_blocks_queued() && !printingIsActive()) {
+        if (leveling_running == 0 && !planner.has_blocks_queued() && !marlin.printingIsActive()) {
           waitway = 2;
           RTS_G28MoveNow();
         }
@@ -2698,7 +2698,7 @@ void RTSSHOW::RTS_HandleData(void)
     case E0FlowKey:
       planner.flow_percentage[0] = recdat.data[0];
       RTS_SndData(recdat.data[0], E0_SET_FLOW_VP);
-      if(!printingIsActive()){
+      if(!marlin.printingIsActive()){
         settings.save();
       }
       break;
@@ -2729,7 +2729,7 @@ void RTSSHOW::RTS_HandleData(void)
         
         while(ABS(thermalManager.degHotend(0) - thermalManager.degTargetHotend(0)) > TEMP_WINDOW)
         {
-          idle();
+          marlin.idle();
         }
 
         {
@@ -2766,7 +2766,7 @@ void RTSSHOW::RTS_HandleData(void)
         }
         while(ABS(thermalManager.degHotend(0) - thermalManager.degTargetHotend(0)) > TEMP_WINDOW)
         {
-          idle();
+          marlin.idle();
         }
 
         {
@@ -2952,7 +2952,7 @@ void RTSSHOW::RTS_HandleData(void)
       settings.save();
       break;
 
-    if (leveling_running == 0 && !printingIsActive()){   
+    if (leveling_running == 0 && !marlin.printingIsActive()){   
       case SetGridMaxPoints: 
         {
           temp_grid_max_points = recdat.data[0];
@@ -3032,7 +3032,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 9)
       { // Leave to device and save
-        if(!printingIsActive() && leveling_running == 0){
+        if(!marlin.printingIsActive() && leveling_running == 0){
           RTS_ShowPage(21);
           settings.save();
           delay(100);
@@ -3327,7 +3327,7 @@ void RTSSHOW::RTS_HandleData(void)
     case Advance_K_Key:
       planner.extruder_advance_K[0] = ((float)recdat.data[0])/1000;
       RTS_SndData(planner.extruder_advance_K[0] * 1000, ADVANCE_K_SET);
-      if(!printingIsActive()){
+      if(!marlin.printingIsActive()){
         settings.save();
       }
       break;
@@ -3335,7 +3335,7 @@ void RTSSHOW::RTS_HandleData(void)
       case Advance_TAU_Key: {
           stepper.set_advance_tau(((float)recdat.data[0]) / 1000.0f, 0);
           RTS_SndData(stepper.get_advance_tau(0) * 1000, ADVANCE_TAU_SET);
-          if(!printingIsActive()){
+          if(!marlin.printingIsActive()){
             settings.save();
           }
         break;
@@ -3344,7 +3344,7 @@ void RTSSHOW::RTS_HandleData(void)
     case XShapingFreqsetEnterKey:
       stepper.set_shaping_frequency(X_AXIS, (float)recdat.data[0]/100);      
       RTS_SndData(stepper.get_shaping_frequency(X_AXIS) * 100, SHAPING_X_FREQUENCY_VP);
-      if(!printingIsActive()){
+      if(!marlin.printingIsActive()){
         settings.save();
       }
       break;
@@ -3352,7 +3352,7 @@ void RTSSHOW::RTS_HandleData(void)
     case YShapingFreqsetEnterKey:
       stepper.set_shaping_frequency(Y_AXIS, (float)recdat.data[0]/100);      
       RTS_SndData(stepper.get_shaping_frequency(Y_AXIS) * 100, SHAPING_Y_FREQUENCY_VP);
-      if(!printingIsActive()){
+      if(!marlin.printingIsActive()){
         settings.save();
       }     
       break;
@@ -3360,7 +3360,7 @@ void RTSSHOW::RTS_HandleData(void)
     case XShapingZetasetEnterKey:  
       stepper.set_shaping_damping_ratio(X_AXIS, (float)recdat.data[0]/100);      
       RTS_SndData(stepper.get_shaping_damping_ratio(X_AXIS) * 100, SHAPING_X_ZETA_VP);
-      if(!printingIsActive()){
+      if(!marlin.printingIsActive()){
         settings.save();
       }
       break;
@@ -3368,7 +3368,7 @@ void RTSSHOW::RTS_HandleData(void)
     case YShapingZetasetEnterKey:  
       stepper.set_shaping_damping_ratio(Y_AXIS, (float)recdat.data[0]/100);      
       RTS_SndData(stepper.get_shaping_damping_ratio(Y_AXIS) * 100, SHAPING_Y_ZETA_VP);
-      if(!printingIsActive()){
+      if(!marlin.printingIsActive()){
         settings.save();
       }
       break;   
@@ -3478,7 +3478,7 @@ void RTSSHOW::RTS_HandleData(void)
           RTS_SendM73Icon(false);
         }
       }else if (recdat.data[0] == 2){
-        if (printingIsActive() && planner.has_blocks_queued()) {        
+        if (marlin.printingIsActive() && planner.has_blocks_queued()) {        
           queue.inject(F(FILAMENT_RUNOUT_SCRIPT));          
           delay(2);
         }
@@ -3487,7 +3487,7 @@ void RTSSHOW::RTS_HandleData(void)
 
     case EditMeshpoint:
     {
-      if (leveling_running == 0 && bedlevel.mesh_is_valid() && !printingIsActive()){      
+      if (leveling_running == 0 && bedlevel.mesh_is_valid() && !marlin.printingIsActive()){      
         current_point = recdat.data[0] - 1;
         uint8_t x_probe_point, y_probe_point;
         calculateProbePoints(current_point, x_probe_point, y_probe_point);
@@ -3506,7 +3506,7 @@ void RTSSHOW::RTS_HandleData(void)
 
     case CurrentMeshpoint: 
     {
-      if (leveling_running == 0 && bedlevel.mesh_is_valid() && !printingIsActive()){
+      if (leveling_running == 0 && bedlevel.mesh_is_valid() && !marlin.printingIsActive()){
         if (current_point >= 0 && current_point <= 100) {
             float new_point_height = (recdat.data[0] >= 32768)
                                     ? ((float)recdat.data[0] - 65536) / 1000
@@ -3979,11 +3979,11 @@ void RTSSHOW::RTS_HandleData(void)
       {
         if(recdat.data[0] == 1)
         {
-          if(printingIsActive())
+          if(marlin.printingIsActive())
           {
             RTS_ShowPage(10);
           }
-          else if(printingIsPaused())
+          else if(marlin.printingIsPaused())
           {
             RTS_ShowPage(12);
           }
@@ -4109,7 +4109,7 @@ void EachMomentUpdate(void)
     {
         static unsigned char last_cardpercentValue = 100;
         // Host Printing without M73
-        if(!lcd_rts_settings.external_m73 && printingIsActive() && !card.isPrinting()){
+        if(!lcd_rts_settings.external_m73 && marlin.printingIsActive() && !card.isPrinting()){
           duration_t elapsed = print_job_timer.duration();
           rtscheck.RTS_SndData(elapsed.value / 3600, PRINT_TIME_HOUR_VP);
           rtscheck.RTS_SndData((elapsed.value % 3600) / 60, PRINT_TIME_MIN_VP);
@@ -4173,7 +4173,7 @@ void EachMomentUpdate(void)
           last_remaining_time = ui.get_remaining_time();
         }
 
-      if(pause_action_flag && !sdcard_pause_check && printingIsPaused() && !planner.has_blocks_queued())
+      if(pause_action_flag && !sdcard_pause_check && marlin.printingIsPaused() && !planner.has_blocks_queued())
       {
         pause_action_flag = false;
         queue.enqueue_now_P(PSTR("G0 F3000 X0 Y0"));
@@ -4591,7 +4591,7 @@ void RTS_ResetMesh(void)
 {
   RTS_LoadMeshPointOffsets();
   rtscheck.sendRectangleCommand(0x2490, 0, 0, 1, 1, 0x1000);
-  if (!printingIsActive()){
+  if (!marlin.printingIsActive()){
     bedlevel.reset();
   }
   bool zig = false;
@@ -4628,11 +4628,11 @@ void RTS_ResetMesh(void)
     rtscheck.RTS_SndData((unsigned long)0xFFFF, TrammingpointNature + (color_sp_offset + counter1 + 1) * 16);
     counter1++;
   }
-  if (!printingIsActive()){
+  if (!marlin.printingIsActive()){
     settings.save();
   }
   RTS_ResetSingleVP(AUTO_BED_LEVEL_CUR_POINT_VP);
-  if (printingIsActive()){
+  if (marlin.printingIsActive()){
     RTS_SendLevelingSiteData(0);
     rtscheck.RTS_SndData(lang + 10, AUTO_LEVELING_START_TITLE_VP);    
   }
@@ -4702,7 +4702,7 @@ void RTS_LoadMesh(void)
       rtscheck.RTS_SndData(deviation * 1000, MESH_POINT_DEVIATION);
       RTS_SendLang(AUTO_LEVELING_START_TITLE_VP);
 
-      if(!printingIsActive()){
+      if(!marlin.printingIsActive()){
         queue.enqueue_now_P(PSTR("M420 S1"));
       }else{
         RTS_LoadMainsiteIcons();
@@ -5188,7 +5188,7 @@ void RTS_MoveAxisHoming(void)
 
 void RTS_CommandPause(void)
 {
-  if(printingIsActive())
+  if(marlin.printingIsActive())
   {
         RTS_LoadMainsiteIcons();
         RTS_ShowPage(13);
@@ -5230,7 +5230,7 @@ void ErrorHanding(void)
       RTS_ShowPage(41);
       // Z axis home failed
       rtscheck.RTS_SndData(Error_202, ABNORMAL_PAGE_TEXT_VP);
-      if(printingIsActive())
+      if(marlin.printingIsActive())
       {
         rtscheck.RTS_SDcard_Stop();
         RTS_ShowPage(1);
