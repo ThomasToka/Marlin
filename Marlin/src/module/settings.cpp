@@ -2297,9 +2297,9 @@ void MarlinSettings::postprocess() {
           _FIELD_TEST(planner_leveling_active);
           const bool &planner_leveling_active = planner.leveling_active;
           const int8_t &ubl_storage_slot = bedlevel.storage_slot;
-          EEPROM_READ(ubl_storage_slot);
           EEPROM_READ(planner_leveling_active);
-        #endif        
+          EEPROM_READ(ubl_storage_slot);
+        #endif
       }
 
       //

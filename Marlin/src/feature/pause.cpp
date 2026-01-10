@@ -633,7 +633,11 @@ void wait_for_confirmation(const bool is_reload/*=false*/, const int8_t max_beep
       nozzle_timed_out = false;
       first_impatient_beep(max_beep_count);
     }
-    marlin.idle_no_sleep();
+    #if ENABLED(E3S1PRO_RTS)
+      marlin.user_resume();
+    #else
+      marlin.idle_no_sleep();
+    #endif
   }
   TERN_(DUAL_X_CARRIAGE, set_duplication_enabled(saved_ext_dup_mode, saved_ext));
 }

@@ -332,97 +332,117 @@ RTSSHOW::RTSSHOW(void)
   memset(databuf, 0, sizeof(databuf));
 }
 
+static void RTS_FreeFilelistLongnames() {
+  for (int j = 0; j < MaxFileNumber; j++) {
+    if (CardRecbuf.Cardshowlongfilename[j]) {
+      delete[] CardRecbuf.Cardshowlongfilename[j];
+      CardRecbuf.Cardshowlongfilename[j] = nullptr;
+    }
+  }
+}
+
 static void RTS_line_to_filelist() {
 
-  char statStr1[4];
+  RTS_FreeFilelistLongnames();
+  memset(&CardRecbuf, 0, sizeof(CardRecbuf));
+
+  char statStr1[6];
+  char statStr2[6];
   snprintf(statStr1, sizeof(statStr1), "%d", file_current_page);
-  char statStr2[4];
   snprintf(statStr2, sizeof(statStr2), "%d", file_total_page);
-  for (int h = 0; h < 2; h++) {
+
   RTS_ResetSingleVP(PAGE_STATUS_TEXT_CURRENT_VP);
-  RTS_ResetSingleVP(PAGE_STATUS_TEXT_TOTAL_VP);    
-  }
+  RTS_ResetSingleVP(PAGE_STATUS_TEXT_TOTAL_VP);
 
   rtscheck.RTS_SndData(statStr1, PAGE_STATUS_TEXT_CURRENT_VP);
   rtscheck.RTS_SndData(statStr2, PAGE_STATUS_TEXT_TOTAL_VP);
 
-  for (int i = 0; i < 5; i += 5) {
-    RTS_ResetSingleVP(FILE1_TEXT_VP + i * 60);
+  for (int slot = 0; slot < 5; slot++) {
+
+    const uint16_t text_vp = FILE1_TEXT_VP + slot * 60;
+    for (int b = 0; b < TEXTBYTELEN; b++)
+      RTS_ResetSingleVP(text_vp + b);
+
+    RTS_ResetSingleVP(FILE6_SELECT_ICON_VP + slot);
+    RTS_ResetSingleVP(FilenameNature + (slot + 1) * 16);
   }
 
-  // clean filename Icon
-  for (int j = 0; j < 5; j++)
-    for (int i = 0; i < TEXTBYTELEN; i++)
-      RTS_ResetSingleVP(CardRecbuf.addr[j] + i);
-
-  memset(&CardRecbuf, 0, sizeof(CardRecbuf));
-
   int num = 0;
-  for (int16_t i = (file_current_page - 1) * 5; i < (file_current_page * 5); i++) {  
-      card.selectFileByIndexSorted(i);
-      char *pointFilename = card.longFilename;
-      int filenamelen = strlen(card.longFilename);
-      //CardRecbuf.filenamelen[num] = strlen(card.longFilename);      
 
-      if (!CardRecbuf.Cardshowlongfilename[num]) {
-          CardRecbuf.Cardshowlongfilename[num] = new char[filenamelen + 1];
-          strcpy(CardRecbuf.Cardshowlongfilename[num], card.longFilename);
-      }
+  const int16_t start = (file_current_page - 1) * 5;
+  const int16_t end   =  file_current_page      * 5;
 
-      int j = 1;
-      while ((strncmp(&pointFilename[j], ".gcode", 6) != 0 && strncmp(&pointFilename[j], ".GCODE", 6) != 0 && strncmp(&pointFilename[j], ".GCO", 4) != 0 && strncmp(&pointFilename[j], ".gco", 4) != 0) && (j++ < filenamelen));
-      int filenameLenWithoutExt = j;
-      CardRecbuf.filenamelen[num] = filenameLenWithoutExt;
-      // Check if the file extension is corrupted
-      const char* expectedExtensions[] = {".gcode", ".GCODE", ".gco", ".GCO"};
-      bool extensionCorrupted = true;
+  for (int16_t idx = start; idx < end; idx++) {
 
-      for (size_t k = 0; k < sizeof(expectedExtensions) / sizeof(expectedExtensions[0]); ++k) {
-          if (EndsWith(card.longFilename, expectedExtensions[k])) {
-              extensionCorrupted = false;
-              break;
-          }
-      }
+    card.selectFileByIndexSorted(idx);
 
-      if (j >= TEXTBYTELEN) {
-        strncpy(&card.longFilename[TEXTBYTELEN - 2], "..", 2); // Reserve 2 characters for ".."
-        card.longFilename[TEXTBYTELEN] = '\0';
-        j = TEXTBYTELEN;
-      } else {
-        j = min(j, TEXTBYTELEN); // Use the smaller of j and TEXTBYTELEN
-      }
-      if (extensionCorrupted) {
-        rtscheck.RTS_SndData((unsigned long)0xFFFF, FilenameNature + (num + 1) * 16);
-        rtscheck.RTS_SndData(204, FILE6_SELECT_ICON_VP + num);
-      }
-      strncpy(CardRecbuf.Cardshowfilename[num], card.longFilename, min(j, TEXTBYTELEN));
-      CardRecbuf.Cardshowfilename[num][TEXTBYTELEN - 1] = '\0';
-      strcpy(CardRecbuf.Cardfilename[num], card.filename);
-      CardRecbuf.addr[num] = FILE1_TEXT_VP + (num * 60);
-      rtscheck.RTS_SndData(CardRecbuf.Cardshowfilename[num], CardRecbuf.addr[num]);
-
-      if (!EndsWith(CardRecbuf.Cardshowlongfilename[num], "gcode") && !EndsWith(CardRecbuf.Cardshowlongfilename[num], "GCO") 
-        && !EndsWith(CardRecbuf.Cardshowlongfilename[num], "GCODE") && !EndsWith(CardRecbuf.Cardshowlongfilename[num], "gco")) 
-      {
-          rtscheck.RTS_SndData((unsigned long)0x073F, FilenameNature + (num + 1) * 16);
-          rtscheck.RTS_SndData(203, FILE6_SELECT_ICON_VP + num);
-      }
-      if (EndsWith(CardRecbuf.Cardshowlongfilename[num], "gcode") || EndsWith(CardRecbuf.Cardshowlongfilename[num], "GCO") 
-        || EndsWith(CardRecbuf.Cardshowlongfilename[num], "GCODE") || EndsWith(CardRecbuf.Cardshowlongfilename[num], "gco")) 
-      {
-          rtscheck.RTS_SndData((unsigned long)0xFFFF, FilenameNature + (num + 1) * 16);
-          rtscheck.RTS_SndData(204, FILE6_SELECT_ICON_VP + num);
-      }
-
-      if (filenamelen == 0) 
-      {
-        RTS_ResetSingleVP(FILE6_SELECT_ICON_VP + num);
-      }
+    const int filenamelen = strlen(card.longFilename);
+    if (filenamelen <= 0) {
       CardRecbuf.Filesum = (++num);
+      continue;
+    }
+
+    CardRecbuf.Cardshowlongfilename[num] = new char[filenamelen + 1];
+    strcpy(CardRecbuf.Cardshowlongfilename[num], card.longFilename);
+
+    char *pointFilename = card.longFilename;
+
+    int j = 1;
+    while ((strncmp(&pointFilename[j], ".gcode", 6) != 0 &&
+            strncmp(&pointFilename[j], ".GCODE", 6) != 0 &&
+            strncmp(&pointFilename[j], ".GCO",   4) != 0 &&
+            strncmp(&pointFilename[j], ".gco",   4) != 0) &&
+           (j++ < filenamelen));
+
+    CardRecbuf.filenamelen[num] = j;
+
+    const char* expectedExtensions[] = {".gcode", ".GCODE", ".gco", ".GCO"};
+    bool extensionCorrupted = true;
+
+    for (size_t k = 0; k < sizeof(expectedExtensions) / sizeof(expectedExtensions[0]); ++k) {
+      if (EndsWith(card.longFilename, expectedExtensions[k])) {
+        extensionCorrupted = false;
+        break;
+      }
+    }
+
+    if (j >= TEXTBYTELEN) {
+      // Reserve 2 characters for ".." inside the TEXTBYTELEN boundary
+      strncpy(&card.longFilename[TEXTBYTELEN - 2], "..", 2);
+      card.longFilename[TEXTBYTELEN - 1] = '\0';
+      j = TEXTBYTELEN - 1;
+    }
+    else {
+      j = min(j, TEXTBYTELEN - 1);
+    }
+
+    strncpy(CardRecbuf.Cardshowfilename[num], card.longFilename, j);
+    CardRecbuf.Cardshowfilename[num][j] = '\0';
+    strcpy(CardRecbuf.Cardfilename[num], card.filename);
+    CardRecbuf.addr[num] = FILE1_TEXT_VP + (num * 60);
+    rtscheck.RTS_SndData(CardRecbuf.Cardshowfilename[num], CardRecbuf.addr[num]);
+
+    const bool is_gcode =
+      EndsWith(CardRecbuf.Cardshowlongfilename[num], ".gcode") ||
+      EndsWith(CardRecbuf.Cardshowlongfilename[num], ".GCODE") ||
+      EndsWith(CardRecbuf.Cardshowlongfilename[num], ".gco")   ||
+      EndsWith(CardRecbuf.Cardshowlongfilename[num], ".GCO");
+
+    if (extensionCorrupted || !is_gcode) {
+      rtscheck.RTS_SndData((unsigned long)0x073F, FilenameNature + (num + 1) * 16);
+      rtscheck.RTS_SndData(203, FILE6_SELECT_ICON_VP + num);
+    }
+    else {
+      rtscheck.RTS_SndData((unsigned long)0xFFFF, FilenameNature + (num + 1) * 16);
+      rtscheck.RTS_SndData(204, FILE6_SELECT_ICON_VP + num);
+    }
+
+    CardRecbuf.Filesum = (++num);
   }
   page_total_file = CardRecbuf.Filesum;
   CardRecbuf.Filesum = ((file_total_page - 1) * 5) + page_total_file;
 }
+
 
 void RTSSHOW::RTS_SDCardInit(void) {
   if (RTS_SD_Detected()) {
@@ -466,7 +486,7 @@ void RTSSHOW::RTS_SDCardInit(void) {
     for (int j = 0; j < MaxFileNumber; j++)
       for (int i = 0; i < TEXTBYTELEN; i++)
         RTS_ResetSingleVP(CardRecbuf.addr[j] + i);
-
+    RTS_FreeFilelistLongnames();
     memset(&CardRecbuf, 0, sizeof(CardRecbuf));
   }
 }
@@ -1400,7 +1420,7 @@ void RTSSHOW::RTS_HandleData(void)
               {
                 pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT;
                 ui.pause_show_message(PAUSE_MESSAGE_RESUME);
-                queue.inject_P(PSTR("M108"));
+                queue.inject(F("M108"));
               }
             #endif
             RTS_ResetProgress();
@@ -1439,7 +1459,7 @@ void RTSSHOW::RTS_HandleData(void)
               {
                 pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT;
                 ui.pause_show_message(PAUSE_MESSAGE_RESUME);
-                queue.inject_P(PSTR("M108"));
+                queue.inject(F("M108"));
               }
             #endif
             RTS_ResetPrintData(true);
@@ -1582,13 +1602,14 @@ void RTSSHOW::RTS_HandleData(void)
         runout.filament_ran_out = false; 
         pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT;
         ui.pause_show_message(PAUSE_MESSAGE_RESUME);
-        queue.inject_P(PSTR("M108"));
+        queue.inject(F("M108"));
         runout.reset();
         RTS_ShowPage(10);
         card.startOrResumeFilePrinting();
         print_job_timer.start();
         Update_Time_Value = 0;
         sdcard_pause_check = true;
+        pause_action_flag = false;
         RTS_SendM600Icon(true);
       }
       else if (recdat.data[0] == 4) 
