@@ -45,8 +45,6 @@
   #include "../../lcd/extui/dgus/DGUSDisplayDef.h"
 #endif
 
-#include "../../MarlinCore.h" // for startOrResumeJob
-
 #if ENABLED(E3S1PRO_RTS)
   #include "../../lcd/rts/e3s1pro/lcd_rts.h"
   #include "../../module/planner.h"
@@ -92,7 +90,7 @@ void GcodeSuite::M24() {
 
   if (card.isFileOpen()) {
     card.startOrResumeFilePrinting(); // SD card will now be read for commands
-    startOrResumeJob();               // Start (or resume) the print job timer
+    marlin.startOrResumeJob();        // Start (or resume) the print job timer
     TERN_(POWER_LOSS_RECOVERY, recovery.prepare());
   }
 

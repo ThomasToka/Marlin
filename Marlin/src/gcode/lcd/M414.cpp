@@ -25,7 +25,6 @@
 #if HAS_MULTI_LANGUAGE
 
 #include "../gcode.h"
-#include "../../MarlinCore.h"
 #include "../../lcd/marlinui.h"
 #if ENABLED(E3S1PRO_RTS)
   #include "../../lcd/rts/e3s1pro/lcd_rts.h"
