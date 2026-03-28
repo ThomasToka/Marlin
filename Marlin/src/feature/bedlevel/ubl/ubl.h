@@ -38,11 +38,6 @@ enum MeshPointType : char { INVALID, REAL, SET_IN_BITMAP, CLOSEST };
 
 struct mesh_index_pair;
 
-#if DISABLED(DYNAMIC_LEVELING)
-  #define MESH_X_DIST (float((MESH_MAX_X) - (MESH_MIN_X)) / (GRID_MAX_CELLS_X))
-  #define MESH_Y_DIST (float((MESH_MAX_Y) - (MESH_MIN_Y)) / (GRID_MAX_CELLS_Y))
-#endif
-
 #if ENABLED(OPTIMIZED_MESH_STORAGE)
   typedef int16_t mesh_store_t[GRID_MAX_POINTS_X][GRID_MAX_POINTS_Y];
 #endif
@@ -85,6 +80,16 @@ private:
     return smart_fill_one(pos.x, pos.y, dir.x, dir.y);
   }
 
+  // G29 sub-function handlers
+  static void G29_handle_homing_and_setup();
+  static void G29_handle_invalidate();
+  static bool G29_handle_test_patterns();
+  #if HAS_BED_PROBE
+    static void G29_handle_tilt_mesh();
+  #endif
+  static bool G29_handle_phase_ops();
+  static void G29_handle_post_processing();
+
   #if ENABLED(UBL_DEVEL_DEBUGGING)
     static void g29_what_command();
     static void g29_eeprom_dump();
@@ -119,10 +124,12 @@ public:
     static void set_mesh_from_store(const mesh_store_t &stored_values, bed_mesh_t &out_values);
   #endif
   #if DISABLED(DYNAMIC_LEVELING)
-    static const float _mesh_index_to_xpos[GRID_MAX_POINTS_X],
-                       _mesh_index_to_ypos[GRID_MAX_POINTS_Y];
-  #endif
-  #if ENABLED(DYNAMIC_LEVELING)
+      #if !HAS_PROUI_MESH_EDIT
+        static const float _mesh_index_to_xpos[GRID_MAX_POINTS_X],
+                          _mesh_index_to_ypos[GRID_MAX_POINTS_Y];
+      #endif
+    #endif
+    #if ENABLED(DYNAMIC_LEVELING)
     static xy_uint8_t max_points;
     static float get_mesh_x(const uint8_t i);
     static float get_mesh_y(const uint8_t i);
@@ -144,11 +151,11 @@ public:
   FORCE_INLINE static void set_z(const int8_t px, const int8_t py, const float z) { z_values[px][py] = z; }
 
   static int8_t cell_index_x_raw(const float x) {
-    return FLOOR((x - (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_X))) * TERN(DYNAMIC_LEVELING, RECIPROCAL(get_mesh_x_dist()), RECIPROCAL(MESH_X_DIST)));
+    return FLOOR((x - (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.x))) * TERN(DYNAMIC_LEVELING, RECIPROCAL(get_mesh_x_dist()), RECIPROCAL(MESH_X_DIST)));
   }
 
   static int8_t cell_index_y_raw(const float y) {
-    return FLOOR((y - (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_y_front, MESH_MIN_Y))) * TERN(DYNAMIC_LEVELING, RECIPROCAL(get_mesh_y_dist()), RECIPROCAL(MESH_Y_DIST)));
+    return FLOOR((y - (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_y_front, mesh_min.y))) * TERN(DYNAMIC_LEVELING, RECIPROCAL(get_mesh_y_dist()), RECIPROCAL(MESH_Y_DIST)));
   }
 
   static bool cell_index_x_valid(const float x) {
@@ -177,7 +184,7 @@ public:
       , const xy_uint8_t& _max_points
     #endif
     ) {
-    const int8_t px = (x -  (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_X)) + (TERN(DYNAMIC_LEVELING, get_mesh_x_dist(), MESH_X_DIST)) * 0.5) * TERN(DYNAMIC_LEVELING, RECIPROCAL(get_mesh_x_dist()), RECIPROCAL(MESH_X_DIST));
+    const int8_t px = (x -  (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.x)) + (TERN(DYNAMIC_LEVELING, get_mesh_x_dist(), MESH_X_DIST)) * 0.5) * TERN(DYNAMIC_LEVELING, RECIPROCAL(get_mesh_x_dist()), RECIPROCAL(MESH_X_DIST));
     return WITHIN(px, 0, (TERN(DYNAMIC_LEVELING, max_points.x, GRID_MAX_POINTS_X)) - 1) ? px : -1;
   }
   static int8_t closest_y_index(const float y
@@ -185,7 +192,7 @@ public:
       , const xy_uint8_t& _max_points
     #endif
     ) {
-    const int8_t py = (y - (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_y_front, MESH_MIN_Y)) + (TERN(DYNAMIC_LEVELING, get_mesh_y_dist(), MESH_Y_DIST)) * 0.5) * TERN(DYNAMIC_LEVELING, RECIPROCAL(get_mesh_y_dist()), RECIPROCAL(MESH_Y_DIST));
+    const int8_t py = (y - (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_y_front, mesh_min.y)) + (TERN(DYNAMIC_LEVELING, get_mesh_y_dist(), MESH_Y_DIST)) * 0.5) * TERN(DYNAMIC_LEVELING, RECIPROCAL(get_mesh_y_dist()), RECIPROCAL(MESH_Y_DIST));
     return WITHIN(py, 0, (TERN(DYNAMIC_LEVELING, max_points.y, GRID_MAX_POINTS_Y)) - 1) ? py : -1;
   }
   static xy_int8_t closest_indexes(const xy_pos_t &xy) {
@@ -282,7 +289,7 @@ public:
      * UBL_Z_RAISE_WHEN_OFF_MESH is specified, that value is returned.
      */
     #ifdef UBL_Z_RAISE_WHEN_OFF_MESH
-      if (!WITHIN(rx0, TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_X), TERN(DYNAMIC_LEVELING, X_BED_SIZE - lcd_rts_settings.probe_margin_x, MESH_MAX_X)) || !WITHIN(ry0, TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_y_front, MESH_MIN_Y), TERN(DYNAMIC_LEVELING, Y_BED_SIZE - lcd_rts_settings.probe_margin_y_back, MESH_MAX_Y)))
+      if (!WITHIN(rx0, TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.x), TERN(DYNAMIC_LEVELING, X_BED_SIZE - lcd_rts_settings.probe_margin_x, mesh_max.x)) || !WITHIN(ry0, TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_y_front, mesh_min.y), TERN(DYNAMIC_LEVELING, Y_BED_SIZE - lcd_rts_settings.probe_margin_y_back, mesh_max.y)))
         return UBL_Z_RAISE_WHEN_OFF_MESH;
     #endif
 
@@ -311,12 +318,20 @@ public:
   static constexpr float get_z_offset() { return 0.0f; }
 
   #if DISABLED(DYNAMIC_LEVELING)
-    static float get_mesh_x(const uint8_t i) {
-      return i < (GRID_MAX_POINTS_X) ? pgm_read_float(&_mesh_index_to_xpos[i]) : MESH_MIN_X + i * (MESH_X_DIST);
-    }
-    static float get_mesh_y(const uint8_t i) {
-      return i < (GRID_MAX_POINTS_Y) ? pgm_read_float(&_mesh_index_to_ypos[i]) : MESH_MIN_Y + i * (MESH_Y_DIST);
-    }
+    static float _get_mesh_x(const uint8_t i) { return mesh_min.x + i * (MESH_X_DIST); }
+    static float _get_mesh_y(const uint8_t i) { return mesh_min.y + i * (MESH_Y_DIST); }
+
+    #if HAS_PROUI_MESH_EDIT
+      static float get_mesh_x(const uint8_t i) { return _get_mesh_x(i); }
+      static float get_mesh_y(const uint8_t i) { return _get_mesh_y(i); }
+    #else
+      static float get_mesh_x(const uint8_t i) {
+        return i < (GRID_MAX_POINTS_X) ? pgm_read_float(&_mesh_index_to_xpos[i]) : _get_mesh_x(i);
+      }
+      static float get_mesh_y(const uint8_t i) {
+        return i < (GRID_MAX_POINTS_Y) ? pgm_read_float(&_mesh_index_to_ypos[i]) : _get_mesh_y(i);
+      }
+    #endif
   #endif
 
   #if UBL_SEGMENTED

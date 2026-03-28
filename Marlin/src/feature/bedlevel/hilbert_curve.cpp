@@ -107,8 +107,8 @@ bool hilbert_curve::search_from(uint8_t x, uint8_t y, hilbert_curve::callback_pt
  */
 bool hilbert_curve::search_from_closest(const xy_pos_t &pos, hilbert_curve::callback_ptr func, void *data) {
   // Find closest grid intersection
-  const uint8_t grid_x = LROUND(constrain(float(pos.x - (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_X))) / (TERN(DYNAMIC_LEVELING, unified_bed_leveling::get_mesh_x_dist(), MESH_X_DIST)), 0, (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X)) - 1));
-  const uint8_t grid_y = LROUND(constrain(float(pos.y - (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_y_front, MESH_MIN_Y))) / (TERN(DYNAMIC_LEVELING, unified_bed_leveling::get_mesh_y_dist(), MESH_Y_DIST)), 0, (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_Y, GRID_MAX_POINTS_Y)) - 1));
+  const uint8_t grid_x = LROUND(constrain(float(pos.x - (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.x))) / (TERN(DYNAMIC_LEVELING, unified_bed_leveling::get_mesh_x_dist(), MESH_X_DIST)), 0, (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X)) - 1));
+  const uint8_t grid_y = LROUND(constrain(float(pos.y - (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_y_front, mesh_min.y))) / (TERN(DYNAMIC_LEVELING, unified_bed_leveling::get_mesh_y_dist(), MESH_Y_DIST)), 0, (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_Y, GRID_MAX_POINTS_Y)) - 1));
   return search_from(grid_x, grid_y, func, data);
 }
 

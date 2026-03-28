@@ -40,11 +40,11 @@
 
 void GcodeSuite::G29() {
 
-  TERN_(FULL_REPORT_TO_HOST_FEATURE, set_and_report_grblstate(M_PROBE));
+  TERN_(FULL_REPORT_TO_HOST_FEATURE, motion.set_and_report_grblstate(M_PROBE));
 
   bedlevel.G29();
 
-  TERN_(FULL_REPORT_TO_HOST_FEATURE, set_and_report_grblstate(M_IDLE));
+  TERN_(FULL_REPORT_TO_HOST_FEATURE, motion.set_and_report_grblstate(M_IDLE));
   #if ENABLED(E3S1PRO_RTS)
     if (lcd_rts_settings.max_points == 7){
       rtscheck.RTS_SndData(100, AUTO_LEVELING_PERCENT_DATA_VP);

@@ -63,9 +63,10 @@ void unified_bed_leveling::report_state() {
 
 int8_t unified_bed_leveling::storage_slot;
 
-float unified_bed_leveling::z_values[GRID_MAX_POINTS_X][GRID_MAX_POINTS_Y];
+bed_mesh_t unified_bed_leveling::z_values;
 
 #if DISABLED(DYNAMIC_LEVELING)
+  #if !HAS_PROUI_MESH_EDIT
     #define _GRIDPOS(A,N) (MESH_MIN_##A + N * (MESH_##A##_DIST))
 
     const float
@@ -81,6 +82,7 @@ float unified_bed_leveling::z_values[GRID_MAX_POINTS_X][GRID_MAX_POINTS_Y];
       _GRIDPOS(Y,  8), _GRIDPOS(Y,  9), _GRIDPOS(Y, 10), _GRIDPOS(Y, 11),
       _GRIDPOS(Y, 12), _GRIDPOS(Y, 13), _GRIDPOS(Y, 14), _GRIDPOS(Y, 15)
     );
+  #endif
 #endif
 
 #if ENABLED(DYNAMIC_LEVELING)
@@ -121,7 +123,7 @@ void unified_bed_leveling::reset() {
   #if ENABLED(EXTENSIBLE_UI)
     GRID_LOOP(x, y) ExtUI::onMeshUpdate(x, y, 0);
   #endif
-  if (was_enabled) report_current_position();
+  if (was_enabled) motion.report_position();
 }
 
 void unified_bed_leveling::invalidate() {
@@ -201,8 +203,8 @@ void unified_bed_leveling::display_map(const uint8_t map_type) {
   SERIAL_ECHOPGM("\nBed Topography Report");
   if (human) {
     SERIAL_ECHOLNPGM(":\n");
-    serial_echo_xy(4, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_X)), (TERN(DYNAMIC_LEVELING, (Y_BED_SIZE - lcd_rts_settings.probe_margin_y_front), MESH_MAX_Y)));
-    serial_echo_xy(twixt, (TERN(DYNAMIC_LEVELING, (X_BED_SIZE - lcd_rts_settings.probe_margin_x), MESH_MAX_X)), (TERN(DYNAMIC_LEVELING, (Y_BED_SIZE - lcd_rts_settings.probe_margin_y_front), MESH_MAX_Y)));
+    serial_echo_xy(4, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.x)), (TERN(DYNAMIC_LEVELING, (Y_BED_SIZE - lcd_rts_settings.probe_margin_y_front), mesh_max.y)));
+    serial_echo_xy(twixt, (TERN(DYNAMIC_LEVELING, (X_BED_SIZE - lcd_rts_settings.probe_margin_x), mesh_max.x)), (TERN(DYNAMIC_LEVELING, (Y_BED_SIZE - lcd_rts_settings.probe_margin_y_front), mesh_max.y)));
     SERIAL_EOL();
     serial_echo_column_labels(eachsp - 2);
   }
@@ -212,7 +214,7 @@ void unified_bed_leveling::display_map(const uint8_t map_type) {
   // Add XY probe offset from extruder because probe.probe_at_point() subtracts them when
   // moving to the XY position to be measured. This ensures better agreement between
   // the current Z position after G28 and the mesh values.
-  const xy_int8_t curr = closest_indexes(xy_pos_t(current_position) + probe.offset_xy);
+  const xy_int8_t curr = closest_indexes(xy_pos_t(motion.position) + probe.offset_xy);
 
   if (!lcd) SERIAL_EOL();
   for (int8_t j = (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_Y, GRID_MAX_POINTS_Y)) - 1; j >= 0; j--) {
@@ -235,6 +237,7 @@ void unified_bed_leveling::display_map(const uint8_t map_type) {
       const float f = z_values[i][j];
       if (lcd) {
         // TODO: Display on Graphical LCD
+        TERN_(DWIN_LCD_PROUI, dwinMeshViewer());
       }
       else if (isnan(f))
         SERIAL_ECHO(human ? F("  .   ") : F("NAN"));
@@ -260,8 +263,8 @@ void unified_bed_leveling::display_map(const uint8_t map_type) {
     serial_echo_column_labels(eachsp - 2);
     SERIAL_EOL();
     // TODO: Is this the right way to do this?
-    serial_echo_xy(4, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_X)), (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_Y)));
-    serial_echo_xy(twixt, (TERN(DYNAMIC_LEVELING, (X_BED_SIZE - lcd_rts_settings.probe_margin_x), MESH_MAX_X)), (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, MESH_MIN_Y)));
+    serial_echo_xy(4, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.x)), (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.y)));
+    serial_echo_xy(twixt, (TERN(DYNAMIC_LEVELING, (X_BED_SIZE - lcd_rts_settings.probe_margin_x), mesh_max.x)), (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.y)));
     SERIAL_EOL();
     SERIAL_EOL();
   }
