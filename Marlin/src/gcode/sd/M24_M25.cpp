@@ -132,8 +132,8 @@ void GcodeSuite::M25() {
 
     #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
       if(laser_device.is_laser_device()){
-        laser_device.pause_before_position_x = current_position.x;
-        laser_device.pause_before_position_y = current_position.y;
+        laser_device.pause_before_position_x = motion.position.x;
+        laser_device.pause_before_position_y = motion.position.y;
         laser_device.power = cutter.power;
       }
     #endif

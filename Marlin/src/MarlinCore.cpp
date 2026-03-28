@@ -429,7 +429,7 @@ void Marlin::startOrResumeJob() {
       IF_DISABLED(NO_SD_AUTOSTART, card.autofile_cancel());
       card.abortFilePrintNow(TERN_(SD_RESORT, true));
       queue.clear();
-      quickstop_stepper();
+      motion.quickstop_stepper();
       print_job_timer.abort();
       laser_device.quick_stop();
       marlin.end_waiting();

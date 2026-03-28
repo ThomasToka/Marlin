@@ -162,7 +162,7 @@ void RTSSHOW::RTS_SDcard_Stop_laser(void)
   queue.clear();
   if(home_flag) planner.synchronize();
 
-  quickstop_stepper();
+  motion.quickstop_stepper();
   print_job_timer.stop();
 
   print_job_timer.reset();
@@ -292,7 +292,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       {
         // card.flag.abort_sd_printing = true;  
         queue.clear();
-        quickstop_stepper();
+        motion.quickstop_stepper();
         print_job_timer.stop();
         RTS_ShowMotorFreeIcon(false); // 激光时锁定
         RTS_ResetPrintData(true);
@@ -313,7 +313,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
           queue.enqueue_now_P(PSTR("G4 S40"));
         }
 
-        if(axes_should_home()) queue.enqueue_one_P(PSTR("G28"));
+        if(motion.axes_should_home()) queue.enqueue_one_P(PSTR("G28"));
         queue.enqueue_one_P(PSTR("G29"));
         RTS_ShowMotorFreeIcon(false);
       }
@@ -372,7 +372,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       break;
 
     case PrintSpeedEnterKey:
-      feedrate_percentage = recdat.data[0];
+      motion.feedrate_percentage = recdat.data[0];
       RTS_SendZoffsetFeedratePercentage(false);
       break;
 
@@ -424,7 +424,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
       else if(recdat.data[0] == 2)
       {
         waitway = 1;
-        // pause_e = current_position[E_AXIS];
+        // pause_e = motion.position[E_AXIS];
         card.pauseSDPrint();
         print_job_timer.pause();
         pause_action_flag = true;
@@ -627,14 +627,14 @@ void RTSSHOW::RTS_HandleData_Laser(void)
 
     case XaxismoveKey:
       waitway = 4;
-      current_position[X_AXIS] = ((float)recdat.data[0]) / 10;
-      if(current_position[X_AXIS] < 0)
+      motion.position[X_AXIS] = ((float)recdat.data[0]) / 10;
+      if(motion.position[X_AXIS] < 0)
       {
-        current_position[X_AXIS] = 0;
+        motion.position[X_AXIS] = 0;
       }
-      else if(current_position[X_AXIS] > X_MAX_POS)
+      else if(motion.position[X_AXIS] > X_MAX_POS)
       {
-        current_position[X_AXIS] = X_MAX_POS;
+        motion.position[X_AXIS] = X_MAX_POS;
       }
       RTS_line_to_current(X_AXIS);
       RTS_SendCurrentPosition(1);
@@ -645,14 +645,14 @@ void RTSSHOW::RTS_HandleData_Laser(void)
 
     case YaxismoveKey:
       waitway = 4;
-      current_position[Y_AXIS] = ((float)recdat.data[0]) / 10;
-      if(current_position[Y_AXIS] < 0)
+      motion.position[Y_AXIS] = ((float)recdat.data[0]) / 10;
+      if(motion.position[Y_AXIS] < 0)
       {
-        current_position[Y_AXIS] = 0;
+        motion.position[Y_AXIS] = 0;
       }
-      else if(current_position[Y_AXIS] > Y_MAX_POS)
+      else if(motion.position[Y_AXIS] > Y_MAX_POS)
       {
-        current_position[Y_AXIS] = Y_MAX_POS;
+        motion.position[Y_AXIS] = Y_MAX_POS;
       }
       RTS_line_to_current(Y_AXIS);
       RTS_SendCurrentPosition(2);
@@ -663,14 +663,14 @@ void RTSSHOW::RTS_HandleData_Laser(void)
 
     case ZaxismoveKey:
       waitway = 4;
-      current_position[Z_AXIS] = ((float)recdat.data[0])/10;
-      if (current_position[Z_AXIS] < Z_MIN_POS)
+      motion.position[Z_AXIS] = ((float)recdat.data[0])/10;
+      if (motion.position[Z_AXIS] < Z_MIN_POS)
       {
-        current_position[Z_AXIS] = Z_MIN_POS;
+        motion.position[Z_AXIS] = Z_MIN_POS;
       }
-      else if (current_position[Z_AXIS] > Z_MAX_POS)
+      else if (motion.position[Z_AXIS] > Z_MAX_POS)
       {
-        current_position[Z_AXIS] = Z_MAX_POS;
+        motion.position[Z_AXIS] = Z_MAX_POS;
       }
 
       RTS_line_to_current(Z_AXIS);
@@ -1193,7 +1193,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
     case FocusZAxisKey: 
     {
       waitway = 4;
-      current_position[Z_AXIS] = ((signed short)recdat.data[0])/10.0;
+      motion.position[Z_AXIS] = ((signed short)recdat.data[0])/10.0;
       RTS_line_to_current(Z_AXIS);
       RTS_SendCurrentPosition(3);
       delay(1);
@@ -1205,7 +1205,7 @@ void RTSSHOW::RTS_HandleData_Laser(void)
     case AdjustFocusKey:
       if(recdat.data[0] == 1)//调节激光焦距
       {
-        RTS_SndData(10*current_position[Z_AXIS], SW_FOCUS_Z_VP);
+        RTS_SndData(10*motion.position[Z_AXIS], SW_FOCUS_Z_VP);
         RTS_ShowPage(63);
       // }else if(recdat.data[0] == 2)// Z+
       // {
@@ -1514,9 +1514,9 @@ void EachMomentUpdateLaser(void)
         rtscheck.RTS_SndData((float)(10 * laser_device.laser_z_axis_high), AXIS_Z_COORD_VP);
         delay(1);
 
-      }else if(laser_device.laser_z_axis_high != current_position.z && first_start_laser == false)
+      }else if(laser_device.laser_z_axis_high != motion.position.z && first_start_laser == false)
       {
-        laser_device.save_z_axis_high_to_eeprom(current_position.z);
+        laser_device.save_z_axis_high_to_eeprom(motion.position.z);
       }
       
     }
@@ -1549,62 +1549,62 @@ void HMI_Area_Move(void)
 
   float y = laser_device.get_laser_range(LASER_MAX_Y) - laser_device.get_laser_range(LASER_MIN_Y);
   float x = laser_device.get_laser_range(LASER_MAX_X) - laser_device.get_laser_range(LASER_MIN_X);
-  float origin_position_x = current_position.x, origin_position_y = current_position.y; // 记录当前位置
+  float origin_position_x = motion.position.x, origin_position_y = motion.position.y; // 记录当前位置
 
 
-  Move_X_scaled = current_position.x*MINUNITMULT;
-  Move_Y_scaled = current_position.y*MINUNITMULT;
+  Move_X_scaled = motion.position.x*MINUNITMULT;
+  Move_Y_scaled = motion.position.y*MINUNITMULT;
 
   Move_X_scaled += laser_device.get_laser_range(LASER_MIN_X)*MINUNITMULT;
   Move_Y_scaled += laser_device.get_laser_range(LASER_MIN_Y)*MINUNITMULT;
 
   LIMIT(Move_X_scaled, (X_MIN_POS)*MINUNITMULT, (X_MAX_POS)*MINUNITMULT);
   LIMIT(Move_Y_scaled, (Y_MIN_POS)*MINUNITMULT, (Y_MAX_POS)*MINUNITMULT);
-  current_position.x = Move_X_scaled / MINUNITMULT;
-  current_position.y = Move_Y_scaled / MINUNITMULT;
+  motion.position.x = Move_X_scaled / MINUNITMULT;
+  motion.position.y = Move_Y_scaled / MINUNITMULT;
 
   // 超出打印区域
-  if(current_position.x+x > X_MAX_POS) x = X_MAX_POS - current_position.x;
-  if(current_position.y+y > Y_MAX_POS) y = Y_MAX_POS - current_position.y;
+  if(motion.position.x+x > X_MAX_POS) x = X_MAX_POS - motion.position.x;
+  if(motion.position.y+y > Y_MAX_POS) y = Y_MAX_POS - motion.position.y;
 
   //先跑到最小位置
-  // current_position.x += laser_device.get_laser_range(LASER_MIN_X);
-  // current_position.y += laser_device.get_laser_range(LASER_MIN_Y);
+  // motion.position.x += laser_device.get_laser_range(LASER_MIN_X);
+  // motion.position.y += laser_device.get_laser_range(LASER_MIN_Y);
 
   //HMI_Plan_Move(homing_feedrate(Y_AXIS));
   RTS_line_to_current(Y_AXIS);
   planner.synchronize();
 
-  //current_position.y += y;
+  //motion.position.y += y;
   Move_Y_scaled += y*MINUNITMULT;
   LIMIT(Move_Y_scaled, (Y_MIN_POS)*MINUNITMULT, (Y_MAX_POS)*MINUNITMULT);
-  current_position.y = Move_Y_scaled / MINUNITMULT;
+  motion.position.y = Move_Y_scaled / MINUNITMULT;
 
   laser_device.laser_power_start(5);
   RTS_line_to_current(Y_AXIS);//HMI_Plan_Move(homing_feedrate(Y_AXIS));
   planner.synchronize();
 
-  //current_position.x += x;
+  //motion.position.x += x;
   Move_X_scaled += x*MINUNITMULT;
   LIMIT(Move_X_scaled, (X_MIN_POS)*MINUNITMULT, (X_MAX_POS)*MINUNITMULT);
-  current_position.x = Move_X_scaled / MINUNITMULT;
+  motion.position.x = Move_X_scaled / MINUNITMULT;
 
   RTS_line_to_current(X_AXIS);//HMI_Plan_Move(homing_feedrate(X_AXIS));
   planner.synchronize();
 
-  //current_position.y -= y;
+  //motion.position.y -= y;
   Move_Y_scaled -= y*MINUNITMULT;
   LIMIT(Move_Y_scaled, (Y_MIN_POS)*MINUNITMULT, (Y_MAX_POS)*MINUNITMULT);
-  current_position.y = Move_Y_scaled / MINUNITMULT;
+  motion.position.y = Move_Y_scaled / MINUNITMULT;
 
   RTS_line_to_current(Y_AXIS);//HMI_Plan_Move(homing_feedrate(Y_AXIS));
   planner.synchronize();
 
 
-  //current_position.x -= x;
+  //motion.position.x -= x;
     Move_X_scaled -= x*MINUNITMULT;
   LIMIT(Move_X_scaled, (X_MIN_POS)*MINUNITMULT, (X_MAX_POS)*MINUNITMULT);
-  current_position.x = Move_X_scaled / MINUNITMULT;
+  motion.position.x = Move_X_scaled / MINUNITMULT;
 
   RTS_line_to_current(X_AXIS);//HMI_Plan_Move(homing_feedrate(X_AXIS));
   planner.synchronize();
@@ -1613,15 +1613,15 @@ void HMI_Area_Move(void)
   laser_device.laser_power_stop(); //关闭激光
 
   //回到原点位置 107011 -20211009
-  // current_position.x = origin_position_x;
-  // current_position.y = origin_position_y;
+  // motion.position.x = origin_position_x;
+  // motion.position.y = origin_position_y;
   Move_X_scaled = origin_position_x*MINUNITMULT;
   Move_Y_scaled = origin_position_y*MINUNITMULT;
   LIMIT(Move_X_scaled, (X_MIN_POS)*MINUNITMULT, (X_MAX_POS)*MINUNITMULT);
   LIMIT(Move_Y_scaled, (Y_MIN_POS)*MINUNITMULT, (Y_MAX_POS)*MINUNITMULT);
 
-  current_position.x = Move_X_scaled / MINUNITMULT;
-  current_position.y = Move_Y_scaled / MINUNITMULT;
+  motion.position.x = Move_X_scaled / MINUNITMULT;
+  motion.position.y = Move_Y_scaled / MINUNITMULT;
 
   RTS_line_to_current(X_AXIS);//HMI_Plan_Move(homing_feedrate(X_AXIS));
   planner.synchronize();

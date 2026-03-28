@@ -817,21 +817,22 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const float z_min_poi
   if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("Probe Low Point: ", z_probe_low_point);
 
   #if ENABLED(DYNAMIC_LEVELING)
+    float measured_z = NAN;
     float* probes = new float[lcd_rts_settings.total_probing]();
     if (lcd_rts_settings.total_probing >= 1) {
       if (try_to_probe(PSTR("SLOW"), z_probe_low_point, MMM_TO_MMS(Z_PROBE_FEEDRATE_SLOW), sanity_check)) return NAN;
       TERN_(MEASURE_BACKLASH_WHEN_PROBING, backlash.measure_with_probe());
-      probes[0] = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, current_position.z, largest_sensorless_adj);
+      probes[0] = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, motion.position.z, largest_sensorless_adj);
       if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("1st Probe Z: ", probes[0]);
     }
     for (int i = 1; i < lcd_rts_settings.total_probing; i++) {
       motion.do_z_clearance(probes[i - 1] + Z_CLEARANCE_BETWEEN_PROBES, false);
       if (try_to_probe(PSTR("SLOW"), z_probe_low_point, MMM_TO_MMS(Z_PROBE_FEEDRATE_SLOW), sanity_check)) return NAN;
       TERN_(MEASURE_BACKLASH_WHEN_PROBING, backlash.measure_with_probe());
-      probes[i] = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, current_position.z, largest_sensorless_adj);
+      probes[i] = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, motion.position.z, largest_sensorless_adj);
       if (DEBUGGING(LEVELING)) SERIAL_ECHOLNPGM("Probe[", i, "] Z: ",  probes[i]);
     }
-    float measured_z = 0.0f;
+    measured_z = 0.0f;
     if (lcd_rts_settings.total_probing > 2) {
       // Calculate median
       static const int PHALF = (lcd_rts_settings.total_probing - 1) / 2;
@@ -856,8 +857,9 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const float z_min_poi
         measured_z = probes[0];
       }
     }
-
     delete[] probes;
+
+    return DIFF_TERN(HAS_HOTEND_OFFSET, measured_z, motion.active_hotend_offset().z);
 
   #else // DWIN_LCD_PROUI
 
@@ -962,6 +964,7 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const float z_min_poi
         #endif
 
         const float measured_z = probes_z_sum * RECIPROCAL(MULTIPLE_PROBING);
+        return DIFF_TERN(HAS_HOTEND_OFFSET, measured_z, motion.active_hotend_offset().z);
 
       #elif TOTAL_PROBING == 2
 
@@ -971,11 +974,13 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const float z_min_poi
 
         // Return a weighted average of the fast and slow probes
         const float measured_z = (z2 * 3.0f + z1 * 2.0f) * 0.2f;
+        return DIFF_TERN(HAS_HOTEND_OFFSET, measured_z, motion.active_hotend_offset().z);
 
       #else
 
         // Return the single probe result
         const float measured_z = motion.position.z;
+        return DIFF_TERN(HAS_HOTEND_OFFSET, measured_z, motion.active_hotend_offset().z);
 
       #endif
 
@@ -1009,8 +1014,15 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const float z_min_poi
         // Small Z raise after probe
         motion.do_z_clearance(z + (Z_CLEARANCE_MULTI_PROBE), false);
       }
+
+      const float measured_z = (hmiData.multiple_probing > 1) ? (probes_z_sum * 3.0f + z1 * 2.0f) * 0.2f : z1;
+      return DIFF_TERN(HAS_HOTEND_OFFSET, measured_z, motion.active_hotend_offset().z);
+
     #endif
+
   #endif
+
+}
 
 #if DO_TOOLCHANGE_FOR_PROBING
 

@@ -2884,7 +2884,7 @@ void Motion::set_axis_is_at_home(const AxisEnum axis) {
 
   #if ENABLED(DUAL_X_CARRIAGE)
     if (axis == X_AXIS && (extruder == 1 || idex_mode == DXC_DUPLICATION_MODE)) {
-      position.x = SUM_TERN(HAS_HOME_OFFSET, x_home_pos(extruder), home_offset.x);
+      position.x = SUM_TERN(HAS_HOME_OFFSET, x_home_pos(extruder), motion.home_offset.x);
       return;
     }
   #endif
@@ -2894,7 +2894,7 @@ void Motion::set_axis_is_at_home(const AxisEnum axis) {
   #elif ENABLED(DELTA)
     position[axis] = (axis == Z_AXIS) ? DIFF_TERN(HAS_BED_PROBE, delta_height, probe.offset.z) : base_home_pos(axis);
   #else
-    position[axis] = SUM_TERN(HAS_HOME_OFFSET, base_home_pos(axis), home_offset[axis]);
+    position[axis] = SUM_TERN(HAS_HOME_OFFSET, base_home_pos(axis), motion.home_offset[axis]);
   #endif
 
   /**
@@ -2924,7 +2924,7 @@ void Motion::set_axis_is_at_home(const AxisEnum axis) {
 
   if (DEBUGGING(LEVELING)) {
     #if HAS_HOME_OFFSET
-      DEBUG_ECHOLNPGM("> home_offset[", C(AXIS_CHAR(axis)), "] = ", home_offset[axis]);
+      DEBUG_ECHOLNPGM("> home_offset[", C(AXIS_CHAR(axis)), "] = ", motion.home_offset[axis]);
     #endif
     DEBUG_POS("", position);
     DEBUG_ECHOLNPGM("<<< set_axis_is_at_home(", C(AXIS_CHAR(axis)), ")");

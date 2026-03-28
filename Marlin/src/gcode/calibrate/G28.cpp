@@ -559,7 +559,7 @@ void GcodeSuite::G28() {
   TERN_(FULL_REPORT_TO_HOST_FEATURE, motion.set_and_report_grblstate(old_grblstate));
   #if ALL(E3S1PRO_RTS, E3S1PRO_RTS_LASER)
     if(laser_device.is_laser_device()){
-      motion.blocking_move_xy(0, 10, homing_feedrate(X_AXIS));
+      motion.blocking_move_xy(0, 10, motion.homing_feedrate(X_AXIS));
       motion.sync_plan_position();
     }
   #endif

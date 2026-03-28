@@ -473,10 +473,15 @@ bool unified_bed_leveling::G29_handle_phase_ops() {
         }
         if (param.V_verbosity > 1)
           SERIAL_ECHOLN(F("Probing around ("), param.XY_pos.x, C(','), param.XY_pos.y, F(").\n"));
-        probe_entire_mesh(param.XY_pos, parser.seen_test('T'), parser.seen_test('E'), parser.seen_test('U'));
+        probe_entire_mesh(param.XY_pos, parser.seen_test('T'), parser.seen_test('E'), parser.seen_test('U') OPTARG(DYNAMIC_LEVELING, color_sp_offset));
 
         motion.report_position();
         SET_PROBE_DEPLOYED(true);
+        #if ENABLED(E3S1PRO_RTS)
+          if (parser.seen_test('C') && touchscreen_requested_mesh == 1) {
+            queue.enqueue_one(F("G29 P3"));
+          }
+        #endif
       } break;
 
     #endif // HAS_BED_PROBE
@@ -590,6 +595,12 @@ bool unified_bed_leveling::G29_handle_phase_ops() {
             break;
         }
       }
+      #if ENABLED(E3S1PRO_RTS)
+        if (touchscreen_requested_mesh == 1) {
+          touchscreen_requested_mesh = 0;
+          queue.enqueue_one(F("G29 S0"));
+        }
+      #endif
       break;
     }
 
@@ -732,7 +743,7 @@ bool unified_bed_leveling::G29_handle_test_patterns() {
 
     case 0:
       // Create a bowl shape similar to a poorly-calibrated Delta
-      GRID_LOOP(x, y) {
+      GRID_LOOP_COND(x, y) {
         const float p1 = 0.5f * (GRID_MAX_POINTS_X) - x,
                     p2 = 0.5f * (GRID_MAX_POINTS_Y) - y;
         z_values[x][y] += 2.0f * HYPOT(p1, p2);
@@ -766,7 +777,7 @@ bool unified_bed_leveling::G29_handle_test_patterns() {
 }
 
 void unified_bed_leveling::shift_mesh_height(const float zoffs) {
-  GRID_LOOP(x, y)
+  GRID_LOOP_COND(x, y)
     if (!isnan(z_values[x][y])) {
       z_values[x][y] += zoffs;
       TERN_(EXTENSIBLE_UI, ExtUI::onMeshUpdate(x, y, z_values[x][y]));
@@ -1451,7 +1462,7 @@ mesh_index_pair unified_bed_leveling::find_furthest_invalid_mesh_point() {
       farthest.pos = nearby; // Found an invalid location farther from the defined mesh point
       farthest.distance = d2;
     }
-  } // GRID_LOOP
+  } // GRID_LOOP_COND
 
   if (!found_a_real && found_a_NAN) {        // if the mesh is totally unpopulated, start the probing
     farthest.pos.set((TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_X, GRID_MAX_POINTS_X)) / 2, (TERN(DYNAMIC_LEVELING, GRID_USED_POINTS_Y, GRID_MAX_POINTS_Y)) / 2);
@@ -1541,7 +1552,7 @@ mesh_index_pair unified_bed_leveling::find_closest_mesh_point_of_type(const Mesh
           closest.distance = best_so_far;
         }
       }
-    } // GRID_LOOP
+    } // GRID_LOOP_COND
 
     return closest;
 
@@ -1667,7 +1678,7 @@ void unified_bed_leveling::smart_fill_mesh() {
       const float x_min = _MAX((X_MIN_POS) + (G29J_MESH_TILT_MARGIN), TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.x), probe.min_x()),
                   x_max = _MIN((X_MAX_POS) - (G29J_MESH_TILT_MARGIN), TERN(DYNAMIC_LEVELING, (X_BED_SIZE - lcd_rts_settings.probe_margin_x), mesh_max.x), probe.max_x()),
                   y_min = _MAX((Y_MIN_POS) + (G29J_MESH_TILT_MARGIN), TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_y_front, mesh_min.y), probe.min_y()),
-                  y_max = _MIN((Y_MAX_POS) - (G29J_MESH_TILT_MARGIN), TERN(DYNAMIC_LEVELING, (Y_BED_SIZE - lcd_rts_settings.probe_margin_y_front), mesh_max.y), probe.max_y()),
+                  y_max = _MIN((Y_MAX_POS) - (G29J_MESH_TILT_MARGIN), TERN(DYNAMIC_LEVELING, (Y_BED_SIZE - lcd_rts_settings.probe_margin_y_back), mesh_max.y), probe.max_y()),
                   dx = (x_max - x_min) / (param.J_grid_size - 1),
                   dy = (y_max - y_min) / (param.J_grid_size - 1);
 

@@ -255,7 +255,7 @@ inline void RTS_line_to_current(AxisEnum axis)
 {
   if (!planner.is_full())
   {
-    planner.buffer_line(current_position, MMM_TO_MMS(manual_feedrate_mm_m[(int8_t)axis]), active_extruder);
+    planner.buffer_line(motion.position, MMM_TO_MMS(manual_feedrate_mm_m[(int8_t)axis]), motion.extruder);
   }
 }
 
@@ -561,7 +561,7 @@ void RTSSHOW::RTS_SDcard_Stop(void)
   planner.synchronize();
   card.flag.abort_sd_printing = true;
   queue.clear();
-  quickstop_stepper();
+  motion.quickstop_stepper();
   print_job_timer.stop();
   IF_DISABLED(SD_ABORT_NO_COOLDOWN, thermalManager.disable_all_heaters());
   print_job_timer.reset();
@@ -681,7 +681,7 @@ void RTSSHOW::RTS_Init(void)
   delay(50);
   last_zoffset = zprobe_zoffset = probe.offset.z;
   touchscreen_requested_mesh = 0;
-  feedrate_percentage = 100;
+  motion.feedrate_percentage = 100;
   RTS_SendZoffsetFeedratePercentage(true);
   for(int i = 0;i < 9;i ++)
   {
@@ -1172,7 +1172,7 @@ void RTSSHOW::RTS_HandleData(void)
         CardUpdate = false;
       }
       else if (recdat.data[0] == 2) {
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           waitway = 4;
           RTS_G28MoveOne();
         }else{
@@ -1199,7 +1199,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if (recdat.data[0] == 5) {  
         queue.clear();
-        quickstop_stepper();
+        motion.quickstop_stepper();
         print_job_timer.stop();
         RTS_ShowMotorFreeIcon(true);
         delay(2);
@@ -1221,7 +1221,7 @@ void RTSSHOW::RTS_HandleData(void)
           queue.enqueue_now_P(PSTR("G4 S40"));
         }
 
-        if(axes_should_home())  queue.enqueue_one_P(PSTR("G28"));
+        if(motion.axes_should_home())  queue.enqueue_one_P(PSTR("G28"));
         RTS_ChangeLevelingPage();
         rtscheck.RTS_SndData(lang + 10, AUTO_LEVELING_START_TITLE_VP);        
         #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
@@ -1311,7 +1311,7 @@ void RTSSHOW::RTS_HandleData(void)
         }
       }
       else if (recdat.data[0] == 163) {
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           waitway = 4;
           queue.enqueue_one_P(PSTR("G28"));
           RTS_ChangeLevelingPage();  
@@ -1386,7 +1386,7 @@ void RTSSHOW::RTS_HandleData(void)
       break;
 
     case PrintSpeedEnterKey:
-      feedrate_percentage = recdat.data[0];
+      motion.feedrate_percentage = recdat.data[0];
       break;
 
     case StopPrintKey:
@@ -1428,7 +1428,7 @@ void RTSSHOW::RTS_HandleData(void)
             temphot = 0;
             card.flag.abort_sd_printing = true;
             queue.clear();
-            quickstop_stepper();
+            motion.quickstop_stepper();
             print_job_timer.abort();
             // delay(10);
             while(planner.has_blocks_queued())
@@ -1467,7 +1467,7 @@ void RTSSHOW::RTS_HandleData(void)
             temphot = 0;
             card.flag.abort_sd_printing = true;
             queue.clear();
-            quickstop_stepper();
+            motion.quickstop_stepper();
             print_job_timer.abort();
             // delay(10);
             while(planner.has_blocks_queued())
@@ -2065,7 +2065,7 @@ void RTSSHOW::RTS_HandleData(void)
       {
         char cmd[23];
         // Assitant Level , Center 1
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           if (bltouch_tramming == 0){
           waitway = 16;
           }
@@ -2118,7 +2118,7 @@ void RTSSHOW::RTS_HandleData(void)
       {
         char cmd[20];
         // Assitant Level , Front Left 2
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           if (bltouch_tramming == 0){
           waitway = 16;
           }
@@ -2147,7 +2147,7 @@ void RTSSHOW::RTS_HandleData(void)
       {
         char cmd[20];
         // Assitant Level , Front Right 3
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           if (bltouch_tramming == 0){
           waitway = 16;
           }
@@ -2176,7 +2176,7 @@ void RTSSHOW::RTS_HandleData(void)
       {
         char cmd[20];
         // Assitant Level , Back Right 4
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           if (bltouch_tramming == 0){
           waitway = 16;
           }
@@ -2205,7 +2205,7 @@ void RTSSHOW::RTS_HandleData(void)
       {
         char cmd[20];
         // Assitant Level , Back Left 5
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           if (bltouch_tramming == 0){
           waitway = 16;
           }
@@ -2233,7 +2233,7 @@ void RTSSHOW::RTS_HandleData(void)
       else if (recdat.data[0] == 0x0B)
       {
         // Assitant Level , Back Left 6
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           if (bltouch_tramming == 0){
           waitway = 16;
           }
@@ -2255,7 +2255,7 @@ void RTSSHOW::RTS_HandleData(void)
       else if (recdat.data[0] == 0x0C)
       {
         // Assitant Level , Back Left 7
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           if (bltouch_tramming == 0){
           waitway = 16;
           }
@@ -2277,7 +2277,7 @@ void RTSSHOW::RTS_HandleData(void)
       else if (recdat.data[0] == 0x0D)
       {
         // Assitant Level , Back Left 8
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           if (bltouch_tramming == 0){
           waitway = 16;
           }
@@ -2300,7 +2300,7 @@ void RTSSHOW::RTS_HandleData(void)
       {
         //char cmd[20];
         // Assitant Level , Back Left 9
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           if (bltouch_tramming == 0){
           waitway = 16;
           }
@@ -2392,7 +2392,7 @@ void RTSSHOW::RTS_HandleData(void)
       else if(recdat.data[0] == 164)
       { // 00A4
         RTS_SendLang(AUTO_LEVELING_START_TITLE_VP);
-        if(axes_should_home()) {
+        if(motion.axes_should_home()) {
           waitway = 15;
           RTS_G28MoveOne();
         }
@@ -2588,13 +2588,13 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 169)
       { // 00A9 // Home Offsets
-        RTS_SndData(home_offset.x * 10, HOME_X_OFFSET_VP);
-        RTS_SndData(home_offset.y * 10, HOME_Y_OFFSET_VP);        
+        RTS_SndData(motion.home_offset.x * 10, HOME_X_OFFSET_VP);
+        RTS_SndData(motion.home_offset.y * 10, HOME_Y_OFFSET_VP);        
         RTS_ShowPage(93);
       } 
       else if(recdat.data[0] == 177)
       { // 00B1 Home X
-        home_offset.x = 0;
+        motion.home_offset.x = 0;
         queue.enqueue_now_P(PSTR("G28"));
         queue.enqueue_now_P(PSTR("G28 X"));
         queue.enqueue_now_P(PSTR("G1 Z5 F1000"));        
@@ -2604,7 +2604,7 @@ void RTSSHOW::RTS_HandleData(void)
       }  
       else if(recdat.data[0] == 178)
       { // 00B2 Home y
-        home_offset.y = 0;
+        motion.home_offset.y = 0;
         queue.enqueue_now_P(PSTR("G28"));      
         queue.enqueue_now_P(PSTR("G28 Y"));
         queue.enqueue_now_P(PSTR("G1 Z5 F1000"));
@@ -2630,14 +2630,14 @@ void RTSSHOW::RTS_HandleData(void)
 
     case XaxismoveKey:
       waitway = 4;
-      current_position[X_AXIS] = ((float)recdat.data[0]) / 10;
-      if(current_position[X_AXIS] < 0)
+      motion.position[X_AXIS] = ((float)recdat.data[0]) / 10;
+      if(motion.position[X_AXIS] < 0)
       {
-        current_position[X_AXIS] = 0;
+        motion.position[X_AXIS] = 0;
       }
-      else if(current_position[X_AXIS] > X_MAX_POS)
+      else if(motion.position[X_AXIS] > X_MAX_POS)
       {
-        current_position[X_AXIS] = X_MAX_POS;
+        motion.position[X_AXIS] = X_MAX_POS;
       }
       RTS_line_to_current(X_AXIS);
       RTS_SendCurrentPosition(1);
@@ -2648,14 +2648,14 @@ void RTSSHOW::RTS_HandleData(void)
 
     case YaxismoveKey:
       waitway = 4;
-      current_position[Y_AXIS] = ((float)recdat.data[0]) / 10;
-      if(current_position[Y_AXIS] < 0)
+      motion.position[Y_AXIS] = ((float)recdat.data[0]) / 10;
+      if(motion.position[Y_AXIS] < 0)
       {
-        current_position[Y_AXIS] = 0;
+        motion.position[Y_AXIS] = 0;
       }
-      else if(current_position[Y_AXIS] > Y_MAX_POS)
+      else if(motion.position[Y_AXIS] > Y_MAX_POS)
       {
-        current_position[Y_AXIS] = Y_MAX_POS;
+        motion.position[Y_AXIS] = Y_MAX_POS;
       }
       RTS_line_to_current(Y_AXIS);
       RTS_SendCurrentPosition(2);
@@ -2666,14 +2666,14 @@ void RTSSHOW::RTS_HandleData(void)
 
     case ZaxismoveKey:
       waitway = 4;
-      current_position[Z_AXIS] = ((float)recdat.data[0])/10;
-      if (current_position[Z_AXIS] < Z_MIN_POS)
+      motion.position[Z_AXIS] = ((float)recdat.data[0])/10;
+      if (motion.position[Z_AXIS] < Z_MIN_POS)
       {
-        current_position[Z_AXIS] = Z_MIN_POS;
+        motion.position[Z_AXIS] = Z_MIN_POS;
       }
-      else if (current_position[Z_AXIS] > Z_MAX_POS)
+      else if (motion.position[Z_AXIS] > Z_MAX_POS)
       {
-        current_position[Z_AXIS] = Z_MAX_POS;
+        motion.position[Z_AXIS] = Z_MAX_POS;
       }
       RTS_line_to_current(Z_AXIS);
       RTS_SendCurrentPosition(3);
@@ -2687,12 +2687,12 @@ void RTSSHOW::RTS_HandleData(void)
       if (recdat.data[FIRST_ELEMENT_INDEX_X] >= THRESHOLD_VALUE_X) {
         recdat.data[FIRST_ELEMENT_INDEX_X] = rec_dat_temp_last_x;
       }      
-      current_position[X_AXIS] = ((float)recdat.data[0]) / 10;
+      motion.position[X_AXIS] = ((float)recdat.data[0]) / 10;
       rec_dat_temp_real_x = ((float)recdat.data[0]) / 10;
       rec_dat_temp_last_x = recdat.data[0];                              
       RTS_line_to_current(X_AXIS);
 
-      RTS_SndData(10 * current_position[X_AXIS], HOME_X_OFFSET_SET_VP);
+      RTS_SndData(10 * motion.position[X_AXIS], HOME_X_OFFSET_SET_VP);
       RTS_SendCurrentPosition(1);
       delay(1);
       RTS_ShowMotorFreeIcon(false);
@@ -2704,12 +2704,12 @@ void RTSSHOW::RTS_HandleData(void)
       if (recdat.data[FIRST_ELEMENT_INDEX_Y] >= THRESHOLD_VALUE_Y) {
         recdat.data[FIRST_ELEMENT_INDEX_Y] = rec_dat_temp_last_y;
       }
-      current_position[Y_AXIS] = ((float)recdat.data[0]) / 10;      
+      motion.position[Y_AXIS] = ((float)recdat.data[0]) / 10;      
       rec_dat_temp_real_y = ((float)recdat.data[0]) / 10;
       rec_dat_temp_last_y = recdat.data[0];                              
       RTS_line_to_current(Y_AXIS);
 
-      RTS_SndData(10 * current_position[Y_AXIS], HOME_Y_OFFSET_SET_VP);
+      RTS_SndData(10 * motion.position[Y_AXIS], HOME_Y_OFFSET_SET_VP);
       RTS_SendCurrentPosition(2);     
       delay(1);
       RTS_ShowMotorFreeIcon(false);
@@ -2736,7 +2736,7 @@ void RTSSHOW::RTS_HandleData(void)
             break;
           }
         #endif
-        current_position[E_AXIS] += FilamentLOAD;
+        motion.position[E_AXIS] += FilamentLOAD;
 
         if((thermalManager.temp_hotend[0].target > EXTRUDE_MINTEMP) && (thermalManager.temp_hotend[0].celsius < (thermalManager.temp_hotend[0].celsius - 5)))
         {
@@ -2774,7 +2774,7 @@ void RTSSHOW::RTS_HandleData(void)
           }
         #endif
 
-        current_position[E_AXIS] -= FilamentUnLOAD;
+        motion.position[E_AXIS] -= FilamentUnLOAD;
 
         if((thermalManager.temp_hotend[0].target > EXTRUDE_MINTEMP) && (thermalManager.temp_hotend[0].celsius < (thermalManager.temp_hotend[0].celsius - 5)))
         {
@@ -3406,8 +3406,8 @@ void RTSSHOW::RTS_HandleData(void)
         home_offset_x_temp = ((float)recdat.data[0])/10;;
         home_offset_x_temp += 0.001;
       }
-      home_offset.x = home_offset_x_temp;
-      RTS_SndData(home_offset.x * 10, HOME_X_OFFSET_VP);
+      motion.home_offset.x = home_offset_x_temp;
+      RTS_SndData(motion.home_offset.x * 10, HOME_X_OFFSET_VP);
       settings.save();
       break;
       
@@ -3423,8 +3423,8 @@ void RTSSHOW::RTS_HandleData(void)
         home_offset_y_temp = ((float)recdat.data[0])/10;;
         home_offset_y_temp += 0.001;
       }
-      home_offset.y = home_offset_y_temp;     
-      RTS_SndData(home_offset.y * 10, HOME_Y_OFFSET_VP);      
+      motion.home_offset.y = home_offset_y_temp;     
+      RTS_SndData(motion.home_offset.y * 10, HOME_Y_OFFSET_VP);      
       settings.save();      
       break;                     
 
@@ -3694,9 +3694,9 @@ void RTSSHOW::RTS_HandleData(void)
                 card.write(buffer, strlen(buffer));
             } else if (i == 5) {
                 char valueStr1[10];
-                dtostrf(home_offset.x, 3, 2, valueStr1);
+                dtostrf(motion.home_offset.x, 3, 2, valueStr1);
                 char valueStr2[10];
-                dtostrf(home_offset.y, 3, 2, valueStr2);
+                dtostrf(motion.home_offset.y, 3, 2, valueStr2);
                 snprintf(buffer, sizeof(buffer), " X%s Y%s", valueStr1, valueStr2);
                 card.write(buffer, strlen(buffer));
             } else if (i == 6) {
@@ -3835,7 +3835,7 @@ void RTSSHOW::RTS_HandleData(void)
         #if ENABLED(BABYSTEPPING)
           RTS_ResetSingleVP(AUTO_BED_LEVEL_ZOFFSET_VP);
         #endif
-        feedrate_percentage = 100;
+        motion.feedrate_percentage = 100;
         zprobe_zoffset = probe.offset.z;
         RTS_SendZoffsetFeedratePercentage(true);
         PoweroffContinue = true;
@@ -4794,11 +4794,11 @@ void RTS_ShowMotorFreeIcon(bool status)
 void RTS_SendCurrentPosition(uint8_t axis)
 {
   if(axis == 4 || axis == 1){
-    rtscheck.RTS_SndData(10 * current_position[X_AXIS], AXIS_X_COORD_VP);
+    rtscheck.RTS_SndData(10 * motion.position[X_AXIS], AXIS_X_COORD_VP);
   }else if (axis == 4 || axis == 2){
-    rtscheck.RTS_SndData(10 * current_position[Y_AXIS], AXIS_Y_COORD_VP);
+    rtscheck.RTS_SndData(10 * motion.position[Y_AXIS], AXIS_Y_COORD_VP);
   }else if (axis == 4 || axis == 3){
-    rtscheck.RTS_SndData(10 * current_position[Z_AXIS], AXIS_Z_COORD_VP);
+    rtscheck.RTS_SndData(10 * motion.position[Z_AXIS], AXIS_Z_COORD_VP);
   }
 }
 
@@ -4970,7 +4970,7 @@ void RTS_SendZoffsetFeedratePercentage(bool sendzoffset)
   if(sendzoffset){
   rtscheck.RTS_SndData(zprobe_zoffset * 100, AUTO_BED_LEVEL_ZOFFSET_VP);
   }
-  rtscheck.RTS_SndData(feedrate_percentage, PRINT_SPEED_RATE_VP);  
+  rtscheck.RTS_SndData(motion.feedrate_percentage, PRINT_SPEED_RATE_VP);  
 }
 
 void RTS_AxisZCoord()

@@ -85,7 +85,7 @@ void GcodeSuite::M117() {
 
       if (hasL && hasG && hasM) {
         rtscheck.RTS_SndData(m117_layer, PRINT_LAYERS_DONE_VP);
-        float current_z_pos = current_position.z;
+        float current_z_pos = motion.position.z;
         rtscheck.RTS_SndData(current_z_pos * 100, PRINT_CURRENT_Z_VP);
         rtscheck.RTS_SndData(picFilament_g_todo, PRINT_FILAMENT_G_TODO_VP);
         rtscheck.RTS_SndData(picFilament_m_todo, PRINT_FILAMENT_M_TODO_VP);
