@@ -51,7 +51,29 @@ void GcodeSuite::M300() {
   #endif
 
   #if ENABLED(E3S1PRO_RTS)
-    rtscheck.RTS_SndData(StartSoundSet, SoundAddr);
+    if (rts_is_dacai) {
+        // Dacai: try command-register style first (0xA0..0xA3), then keep
+        // existing variable-write style fallbacks for broader compatibility.
+        const uint8_t vol = (uint8_t)lcd_rts_settings.display_volume;
+
+        // Register-byte writes: [sound_id, section_id, volume, play_mode].
+        rtscheck.RTS_SndData(0x06, 0x00A0, RegAddr_W);
+        rtscheck.RTS_SndData(0x01, 0x00A1, RegAddr_W);
+        rtscheck.RTS_SndData(vol, 0x00A2, RegAddr_W);
+        rtscheck.RTS_SndData(0x02, 0x00A3, RegAddr_W);
+
+        // Variable write of the same 4-byte payload at 0x00A0.
+        const uint8_t dacai_music_play[] = { 0x06, 0x01, vol, 0x02 };
+        rtscheck.writeVariable(SoundAddr, dacai_music_play, sizeof(dacai_music_play));
+
+        // Sovol RTS uses this 4-byte beep command family on the same SoundAddr.
+        rtscheck.RTS_SndData(0x02AF0100UL, SoundAddr);
+        rtscheck.RTS_SndData(0xFFFF0101UL, SoundAddr);
+    }
+    else {
+      // DWIN T5L: original StartSoundSet command works correctly.
+      rtscheck.RTS_SndData(StartSoundSet, SoundAddr);
+    }
   #else
     const uint16_t frequency = parser.ushortval('S', 260);
     uint16_t duration = parser.ushortval('P', 1000);

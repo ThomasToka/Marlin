@@ -191,6 +191,7 @@ float FilamentUnLOAD;
 int Update_Time_Value;
 bool PoweroffContinue;
 char commandbuf[30];
+char about_lcd_version[21] = { 0 };
 static bool last_card_insert_st;
 bool card_insert_st;
 bool sd_printing;
@@ -213,6 +214,15 @@ int custom_ceil(float x) {
         return static_cast<int>(x);
     }
 }
+
+//static inline uint8_t normalized_probe_margin_y(const uint8_t requested_margin_y) {
+//  probe_offset_y_temp = fabs(probe.offset_xy.y);
+//  const int max_reachable_pos_y = Y_MAX_POS - custom_ceil(probe_offset_y_temp);
+//  int min_calc_margin_y = Y_BED_SIZE - max_reachable_pos_y;
+//  if (min_calc_margin_y <= 10)
+//    min_calc_margin_y = 10;
+//  return _MAX(requested_margin_y, min_calc_margin_y);
+//}
 
 enum{
   PREHEAT_PLA = 0,
@@ -279,6 +289,9 @@ void resetSettings() {
 
 void loadSettings(const char * const buff) {
   memcpy(&lcd_rts_settings, buff, _MIN(sizeof(lcd_rts_settings), eeprom_data_size));
+  //const uint8_t normalized_margin_y = _MAX(_MAX(lcd_rts_settings.probe_margin_y_front, lcd_rts_settings.probe_margin_y_back), uint8_t(10));
+  //lcd_rts_settings.probe_margin_y_front = normalized_margin_y;
+  //lcd_rts_settings.probe_margin_y_back = normalized_margin_y;
   #if ENABLED(LCD_RTS_DEBUG_EEPROM_SETTINGS)  
     SERIAL_ECHOLNPGM("Saved settings: ");
     SERIAL_ECHOLNPGM("settings_size: ", lcd_rts_settings.settings_size);
@@ -446,8 +459,8 @@ static void RTS_line_to_filelist() {
 
 void RTSSHOW::RTS_SDCardInit(void) {
   if (RTS_SD_Detected()) {
-    delay(50);  // give card controller a bit of time to settle
-    card.mount();
+    delay(5);  // give card controller a bit of time to settle
+    if (!card.flag.mounted) card.mount();
   }
   //DEBUG_ECHOLNPGM(" card.flag.mounted=: ", card.flag.mounted);
   if (card.flag.mounted) {
@@ -658,9 +671,234 @@ void RTSSHOW::setTouchScreenConfiguration() {
   RTS_SndData(lcd_rts_settings.display_standby ? 3 : 2, DISPLAYSTANDBY_ENABLEINDICATOR);
 }
 
+bool rts_is_dacai = false;
+
+static bool display_detect_in_progress = false;
+
+// Drain pending LCD RX bytes, but never spin forever on noisy/streaming UART.
+static inline void drainLcdSerialWithTimeout(const millis_t timeout_ms = 30) {
+  const millis_t deadline = millis() + timeout_ms;
+  while (PENDING(millis(), deadline) && LCDSERIAL.available())
+    (void)LCDSERIAL.read();
+}
+
+static bool consumeDisplayTypeProbeResponse() {
+  if (!display_detect_in_progress) return false;
+
+  if (RTSSHOW::recdat.command != RegAddr_R || RTSSHOW::recdat.addr != DGUS_VERSION)
+    return false;
+
+  // Any valid 0x81 reply to register 0x0F identifies Dacai.
+  rts_is_dacai = true;
+  display_detect_in_progress = false;
+  return true;
+}
+
+// Probe register 0x0F through the existing DGUS send/receive path.
+// Dacai replies to this register read, while DWIN doesn't. This avoids raw
+// serial framing in detection and keeps parsing centralized in RTS_RecData.
+void RTSSHOW::detectDisplayType() {
+  static bool detect_done = false;
+  if (detect_done) return;
+  detect_done = true;
+
+  rts_is_dacai = false; // default-safe for DWIN
+  display_detect_in_progress = true;
+  bool saw_any_rx = false;
+
+  for (uint8_t attempt = 1; attempt <= 3 && display_detect_in_progress; attempt++) {
+    if (attempt > 1) delay(40);
+
+    // Flush stale bytes then issue a register read through the proven sender.
+    drainLcdSerialWithTimeout();
+    rtscheck.RTS_SndData(2, DGUS_VERSION, RegAddr_R);
+
+    const millis_t deadline = millis() + 120;
+    while (display_detect_in_progress && PENDING(millis(), deadline)) {
+      if (LCDSERIAL.available()) saw_any_rx = true;
+      if (rtscheck.RTS_RecData() != 2) continue;
+
+      if (consumeDisplayTypeProbeResponse()) break;
+
+      // Preserve normal behavior for unrelated packets.
+      rtscheck.RTS_HandleData();
+    }
+
+    // On a quiet line with no screen reply, stop retrying early.
+    if (!saw_any_rx && attempt >= 2) break;
+  }
+
+  display_detect_in_progress = false;
+
+  if (rts_is_dacai) SERIAL_ECHOLNPGM("Dacai XGUS detected");
+  else SERIAL_ECHOLNPGM("DWIN T5L detected");
+
+  // Clear the full text field width so old tail characters can't remain.
+  RTSSHOW::RTS_SndText(rts_is_dacai ? "DACAI" : "DWIN", DISPLAY_TYPE_SITE0_TEXT_VP, 20);
+}
+
+static bool readDisplayAboutVersion(
+  char * const out,
+  const uint8_t out_len,
+  const uint8_t max_attempts = 6,
+  const millis_t per_attempt_timeout = 250,
+  const uint16_t inter_attempt_delay_ms = 60
+) {
+  if (!out || out_len < 2) return false;
+  out[0] = '\0';
+
+  bool saw_any_rx = false;
+
+  for (uint8_t attempt = 0; attempt < max_attempts; attempt++) {
+    // Drain stale bytes before every read request.
+    drainLcdSerialWithTimeout();
+
+    rtscheck.RTS_SndData(20, PRINTER_DISPLAY_VERSION_TEXT_VP, VarAddr_R);
+
+    const millis_t deadline = millis() + per_attempt_timeout;
+    while (PENDING(millis(), deadline)) {
+      if (LCDSERIAL.available()) saw_any_rx = true;
+      if (rtscheck.RTS_RecData() != 2) continue;
+
+      if (RTSSHOW::recdat.command != VarAddr_R
+        || RTSSHOW::recdat.addr != PRINTER_DISPLAY_VERSION_TEXT_VP
+        || RTSSHOW::recdat.bytelen == 0
+      ) continue;
+
+      const uint8_t max_bytes = _MIN((uint8_t)20, RTSSHOW::recdat.bytelen);
+      uint8_t out_i = 0;
+
+      for (uint8_t i = 0; i < max_bytes && out_i < (out_len - 1); i++) {
+        const uint8_t byte = (i & 1)
+          ? uint8_t(RTSSHOW::recdat.data[i >> 1] & 0xFF)
+          : uint8_t(RTSSHOW::recdat.data[i >> 1] >> 8);
+
+        if (!byte) break;
+
+        if ((i + 1) < max_bytes && byte == 0xFF) {
+          const uint8_t next_byte = ((i + 1) & 1)
+            ? uint8_t(RTSSHOW::recdat.data[(i + 1) >> 1] & 0xFF)
+            : uint8_t(RTSSHOW::recdat.data[(i + 1) >> 1] >> 8);
+          if (next_byte == 0xFF) break;
+        }
+
+        out[out_i++] = (byte >= 0x20 && byte <= 0x7E) ? char(byte) : '?';
+      }
+
+      while (out_i && out[out_i - 1] == ' ') out_i--;
+      out[out_i] = '\0';
+      return out_i > 0;
+    }
+
+    // On legacy screens with no response on this VP, bail out quickly.
+    if (!saw_any_rx && attempt >= 1) break;
+
+    if (inter_attempt_delay_ms) delay(inter_attempt_delay_ms);
+  }
+
+  return false;
+}
+
+// About text color writes go to SP + 3 for each DGUS text object.
+// DGUS project mapping:
+//   VP 17C4 (mainboard version) -> SP 0x6060, color at 0x6063
+//   VP 17D8 (screen version)    -> SP 0x6070, color at 0x6073
+static constexpr uint16_t ABOUT_COLOR_WHITE = 0xFFFF;
+static constexpr uint16_t ABOUT_COLOR_RED   = 0xF800;
+
+static int16_t extractBuildRevision(const char * const s) {
+  if (!s) return -1;
+
+  int16_t rev = -1;
+  for (const char *p = s; *p; p++) {
+    if (*p != 'v' && *p != 'V') continue;
+    if (!WITHIN(*(p + 1), '0', '9')) continue;
+
+    int16_t val = 0;
+    const char *q = p + 1;
+    while (WITHIN(*q, '0', '9')) {
+      val = val * 10 + (*q - '0');
+      q++;
+    }
+    rev = val;
+  }
+
+  // Fallback for strings that don't contain vNNN but still carry a numeric revision.
+  if (rev < 0) {
+    for (const char *p = s; *p; p++) {
+      if (!WITHIN(*p, '0', '9')) continue;
+
+      int16_t val = 0;
+      const char *q = p;
+      while (WITHIN(*q, '0', '9')) {
+        val = val * 10 + (*q - '0');
+        q++;
+      }
+      rev = val;
+      p = q - 1;
+    }
+  }
+
+  return rev;
+}
+
+static void applyAboutVersionColors() {
+  uint16_t mb_color = ABOUT_COLOR_WHITE;
+  uint16_t sc_color = ABOUT_COLOR_WHITE;
+
+  const int16_t mainboard_rev = extractBuildRevision(FIRMWARE_VERSION);
+  int16_t screen_rev = extractBuildRevision(about_lcd_version);
+
+  // If startup read missed the screen version, try once on-demand before coloring.
+  // Skip this on DWIN to avoid slow retry loops on firmware without this VP.
+  if (screen_rev < 0) {
+    char lcd_version[21] = { 0 };
+    const bool got_lcd_version = rts_is_dacai
+      ? readDisplayAboutVersion(lcd_version, sizeof(lcd_version), 6, 250, 60)
+      : readDisplayAboutVersion(lcd_version, sizeof(lcd_version), 2, 120, 20);
+    if (got_lcd_version) {
+      strncpy(about_lcd_version, lcd_version, sizeof(about_lcd_version) - 1);
+      about_lcd_version[sizeof(about_lcd_version) - 1] = '\0';
+      screen_rev = extractBuildRevision(about_lcd_version);
+    }
+  }
+
+  if (mainboard_rev >= 0 && screen_rev >= 0) {
+    if (mainboard_rev < screen_rev) mb_color = ABOUT_COLOR_RED;
+    else if (screen_rev < mainboard_rev) sc_color = ABOUT_COLOR_RED;
+  }
+
+  rtscheck.RTS_SndData((unsigned long)mb_color, MAINBOARD_FW_COLOR_VP + 3);
+  rtscheck.RTS_SndData((unsigned long)sc_color, SCREEN_FW_COLOR_VP + 3);
+  rtscheck.RTS_SndData((unsigned long)mb_color, MAIN_MAINBOARD_FW_COLOR_VP + 3);
+  rtscheck.RTS_SndData((unsigned long)sc_color, MAIN_SCREEN_FW_COLOR_VP + 3);
+}
+
 void RTSSHOW::RTS_Init(void)
 {
   delay(200);
+  detectDisplayType();
+  {
+    char lcd_version[21] = { 0 };
+    const bool got_lcd_version = rts_is_dacai
+      ? readDisplayAboutVersion(lcd_version, sizeof(lcd_version), 6, 250, 60)
+      : readDisplayAboutVersion(lcd_version, sizeof(lcd_version), 2, 120, 20);
+
+    if (got_lcd_version) {
+      strncpy(about_lcd_version, lcd_version, sizeof(about_lcd_version) - 1);
+      about_lcd_version[sizeof(about_lcd_version) - 1] = '\0';
+      SERIAL_ECHOLN("About versions - FW: ", FIRMWARE_VERSION, ", LCD: ", lcd_version);
+    }
+    else {
+      strcpy(about_lcd_version, "n/a");
+      SERIAL_ECHOLN("About versions - FW: ", FIRMWARE_VERSION, ", LCD: n/a");
+    }
+
+    // Write fixed-length fields to avoid stale trailing chars when a new string is shorter.
+    RTSSHOW::RTS_SndText(FIRMWARE_VERSION, MAIN_FIRMWARE_VERSION_ABOUT_TEXT_VP, 20);
+    RTSSHOW::RTS_SndText(about_lcd_version, MAIN_PRINTER_DISPLAY_VERSION_TEXT_VP, 20);
+    applyAboutVersionColors();
+  }
   lang = language_change_font;
   // Defaults moved out of .data to save FLASH
   ChangeFilamentTemp  = 200.0f;
@@ -689,7 +927,6 @@ void RTSSHOW::RTS_Init(void)
   }
   RTS_SetOneToVP(LANGUAGE_CHINESE_TITLE_VP + (language_change_font - 1));
   languagedisplayUpdate();
-  delay(500);
   last_target_temperature[0] = thermalManager.temp_hotend[0].target;
   last_target_temperature_bed = thermalManager.temp_bed.target;
   RTS_ShowMotorFreeIcon(false);
@@ -705,11 +942,8 @@ void RTSSHOW::RTS_Init(void)
   RTS_SetBltouchHSMode();
   RTS_LoadMesh();
   thermalManager.set_fan_speed(0, 0);
-  delay(5);
   RTS_SDCardInit();
   RTS_ShowPreviewImage(true);
-  delay(5);
-
   RTS_LoadMainsiteIcons();
   RTS_SendM600Icon(false);
   setTouchScreenConfiguration();
@@ -717,10 +951,11 @@ void RTSSHOW::RTS_Init(void)
   RTS_SetOneToVP(PREHAEAT_NOZZLE_ICON_VP);
   RTS_SetOneToVP(PREHAEAT_HOTBED_ICON_VP);
   RTS_CleanPrintAndSelectFile();
+  RTS_SendMachineData();
   RTS_ShowPage(0);
   hal.watchdog_refresh();
-  for(startprogress = 0; startprogress <= 100; startprogress++)
-  {
+  // Keep boot progress visual, but avoid multi-second blocking during setup.
+  for (startprogress = 0; startprogress <= 100; startprogress++) {
     rtscheck.RTS_SndData(startprogress, START_PROCESS_ICON_VP);
     hal.watchdog_refresh();
     delay(50);
@@ -977,6 +1212,11 @@ void RTSSHOW::RTS_SndData(int n, unsigned long addr, unsigned char cmd /*= VarAd
   else if (cmd == RegAddr_W)
   {
     snddat.data[0] = n;
+    snddat.len = 3;
+  }
+  else if (cmd == RegAddr_R)
+  {
+    snddat.bytelen = n;
     snddat.len = 3;
   }
   else if (cmd == VarAddr_R)
@@ -1587,6 +1827,7 @@ void RTSSHOW::RTS_HandleData(void)
           else
           {
             RTS_ShowPage(8);
+            //marlin.user_resume();
           }
         #endif
       }
@@ -1599,10 +1840,24 @@ void RTSSHOW::RTS_HandleData(void)
             break;
           }
         #endif    
-        runout.filament_ran_out = false; 
+        runout.filament_ran_out = false;
+        //#if ENABLED(ADVANCED_PAUSE_FEATURE)
+        //  if (did_pause_print) {
+        //    // M600 / M125: release the pause state machine and let resume_print handle SD/timer restore.
+        //    pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT;
+        //    ui.pause_show_message(PAUSE_MESSAGE_RESUME);
+        //    queue.inject(F("M108"));
+        //    runout.reset();
+        //    RTS_ShowPage(10);
+        //    pause_action_flag = false;
+        //    RTS_SendM600Icon(true);
+        //    break;
+        //  }
+        //#endif
         pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT;
         ui.pause_show_message(PAUSE_MESSAGE_RESUME);
         queue.inject(F("M108"));
+        // Plain SD pause resume (no active advanced-pause state).
         runout.reset();
         RTS_ShowPage(10);
         card.startOrResumeFilePrinting();
@@ -1730,6 +1985,10 @@ void RTSSHOW::RTS_HandleData(void)
         babystep.add_mm(Y_AXIS, babystep_y_offset);
       }
       probe.offset.y = yprobe_yoffset;
+      //const uint8_t normalized_margin_y = normalized_probe_margin_y(lcd_rts_settings.probe_margin_y_back);
+      //if (lcd_rts_settings.probe_margin_y_front != normalized_margin_y || lcd_rts_settings.probe_margin_y_back != normalized_margin_y) {
+      //  lcd_rts_settings.probe_margin_y_front = normalized_margin_y;
+      //  lcd_rts_settings.probe_margin_y_back = normalized_margin_y;
       probe_offset_y_temp = fabs(probe.offset.y);
 
       int max_reachable_pos_y = Y_MAX_POS - custom_ceil(probe_offset_y_temp);
@@ -1746,7 +2005,7 @@ void RTSSHOW::RTS_HandleData(void)
         }else{
           lcd_rts_settings.probe_margin_y_front = min_calc_margin_y;
           lcd_rts_settings.probe_margin_y_back = min_calc_margin_y;
-        }
+        }      
         RTS_SendLevelingSiteData(2);
       }
       RTS_SndData(yprobe_yoffset * 100, HOTEND_Y_ZOFFSET_VP);
@@ -1920,10 +2179,7 @@ void RTSSHOW::RTS_HandleData(void)
       }
       else if(recdat.data[0] == 5)
       {  
-        RTS_SendMachineData();
-        delay(5);
         RTS_ShowPage(24);
-        delay(1000);
       }
       else if(recdat.data[0] == 6)
       {
@@ -4373,6 +4629,7 @@ void RTSSHOW::languagedisplayUpdate(void)
   RTS_SendLang(HARDWARE_VERSION_ABOUT_TITLE_VP);
   RTS_SendLang(WEBSITE_ABOUT_CHAR_VP);
   RTS_SendLang(PRINTER_PRINTSIZE_TITLE_VP);
+  RTS_SendLang(DISPLAY_TYPE_ICON_VP);
   RTS_SendLang(PLA_SETTINGS_TITLE_VP);
   RTS_SendLang(ABS_SETTINGS_TITLE_VP);
   RTS_SendLang(PETG_SETTINGS_TITLE_VP);
@@ -4434,9 +4691,9 @@ void RTS_Update(void)
 
   EachMomentUpdate();
   // wait to receive massage and response
-  if (rtscheck.RTS_RecData() > 0)
-  {
-    rtscheck.RTS_HandleData();
+  if (rtscheck.RTS_RecData() > 0) {
+    if (!consumeDisplayTypeProbeResponse())
+      rtscheck.RTS_HandleData();
   }
   hal.watchdog_refresh();
 }
@@ -5074,6 +5331,9 @@ void RTS_SetProbeMarginX(uint8_t marginx, uint8_t m19load)
 
 void RTS_SetProbeMarginY(uint8_t marginy, uint8_t m19load)
 {
+  //const uint8_t normalized_margin_y = normalized_probe_margin_y(marginy);
+  //lcd_rts_settings.probe_margin_y_front = normalized_margin_y;
+  //lcd_rts_settings.probe_margin_y_back = normalized_margin_y;
   probe_offset_y_temp = fabs(probe.offset_xy.y);
   int max_reachable_pos_y = Y_MAX_POS - custom_ceil(probe_offset_y_temp);
   int min_calc_margin_y = Y_BED_SIZE - max_reachable_pos_y;
@@ -5099,7 +5359,7 @@ void RTS_SetProbeMarginY(uint8_t marginy, uint8_t m19load)
   }else if(min_calc_margin_y == marginy){
     lcd_rts_settings.probe_margin_y_front = marginy;
     lcd_rts_settings.probe_margin_y_back = marginy;
-  }
+  }  
   RTS_SendLevelingSiteData(2);
   if (m19load == 0){
     settings.save();

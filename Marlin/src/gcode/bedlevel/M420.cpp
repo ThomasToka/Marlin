@@ -26,10 +26,17 @@
 
 #include "../gcode.h"
 #include "../../feature/bedlevel/bedlevel.h"
+#include "../../module/motion.h"
 #include "../../module/planner.h"
 
 #if ENABLED(MARLIN_DEV_MODE)
   #include "../../module/probe.h"
+#endif
+
+#if ENABLED(MARLIN_DEV_MODE) && ENABLED(AUTO_BED_LEVELING_BILINEAR)
+  static inline xy_pos_t bilinear_grid_start_from_probe(const xy_pos_t &probe_xy) {
+    return probe_xy - DIFF_TERN(HAS_HOTEND_OFFSET, probe.offset_xy, xy_pos_t(hotend_offset[active_extruder]));
+  }
 #endif
 
 #if ENABLED(EEPROM_SETTINGS)
@@ -74,7 +81,7 @@ void GcodeSuite::M420() {
         start.set(x_min, y_min);
         spacing.set((x_max - x_min) / (GRID_MAX_CELLS_X),
                     (y_max - y_min) / (GRID_MAX_CELLS_Y));
-        bedlevel.set_grid(spacing, start, bedlevel.max_points);
+        bedlevel.set_grid(spacing, Probe::convert_to_nozzle_xy(start), bedlevel.max_points);
       #endif
       GRID_LOOP_COND(x, y) {
         bedlevel.z_values[x][y] = 0.001 * random(-200, 200);

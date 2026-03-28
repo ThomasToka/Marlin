@@ -365,6 +365,7 @@ const uint16_t DGUS_VERSION = 0x000F;
 
 #define WEBSITE_ABOUT_CHAR_VP              0x1405
 #define PRINTER_PRINTSIZE_TITLE_VP         0x1406
+#define DISPLAY_TYPE_ICON_VP               0x1407
 
 #define LANGUAGE_CHINESE_TITLE_VP          0x1411
 #define LANGUAGE_ENGLISH_TITLE_VP          0x1412
@@ -462,10 +463,18 @@ const uint16_t DGUS_VERSION = 0x000F;
 
 #define MACHINE_TYPE_ABOUT_TEXT_VP         0x17B0
 #define FIRMWARE_VERSION_ABOUT_TEXT_VP     0x17C4
+#define MAIN_FIRMWARE_VERSION_ABOUT_TEXT_VP     0x1950
 #define PRINTER_DISPLAY_VERSION_TEXT_VP    0x17D8
+#define MAIN_PRINTER_DISPLAY_VERSION_TEXT_VP    0x1964
 #define HARDWARE_VERSION_ABOUT_TEXT_VP     0x17EC
 #define PRINTER_PRINTSIZE_TEXT_VP          0x1800
 #define WEBSITE_ABOUT_TEXT_VP              0x1814
+#define DISPLAY_TYPE_SITE0_TEXT_VP         0x1978
+
+#define MAINBOARD_FW_COLOR_VP              0x6060
+#define SCREEN_FW_COLOR_VP                 0x6070
+#define MAIN_MAINBOARD_FW_COLOR_VP         0x6080
+#define MAIN_SCREEN_FW_COLOR_VP            0x6090
 
 #define FilenameNature                     0x6003
 #define TrammingpointNature                0x6153
@@ -590,6 +599,7 @@ class RTSSHOW
       void RTS_HandleData_Laser(void);
       void RTS_SDcard_Stop_laser(void);
     #endif
+    void detectDisplayType();
     void writeVariable(const uint16_t adr, const void * const values, uint8_t valueslen, const bool isstr=false, const char fillChar=' ');    
     void setTouchScreenConfiguration();    
     void sendRectangleCommand(uint16_t vpAddress, uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
@@ -913,6 +923,7 @@ extern unsigned int picFilament_g;
 extern float picLayerHeight;
 extern uint8_t settingsload;
 extern lcd_rts_settings_t lcd_rts_settings;
+extern bool rts_is_dacai;
 void saveSettings(char * const buff);
 void loadSettings(const char * const buff);
 void resetSettings();

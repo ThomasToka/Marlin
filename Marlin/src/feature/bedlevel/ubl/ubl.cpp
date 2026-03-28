@@ -93,6 +93,7 @@ bed_mesh_t unified_bed_leveling::z_values;
   }
 
   float unified_bed_leveling::get_mesh_y(const uint8_t i) {
+    //return lcd_rts_settings.probe_margin_y_front + i * get_mesh_y_dist();
     if (i == 0) {
         return lcd_rts_settings.probe_margin_y_front;
     } else if (i == (bedlevel.max_points.y - 1)) {
@@ -265,6 +266,8 @@ void unified_bed_leveling::display_map(const uint8_t map_type) {
     // TODO: Is this the right way to do this?
     serial_echo_xy(4, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.x)), (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.y)));
     serial_echo_xy(twixt, (TERN(DYNAMIC_LEVELING, (X_BED_SIZE - lcd_rts_settings.probe_margin_x), mesh_max.x)), (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.y)));
+    //serial_echo_xy(4, (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_x, mesh_min.x)), (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_y_front, mesh_min.y)));
+    //serial_echo_xy(twixt, (TERN(DYNAMIC_LEVELING, (X_BED_SIZE - lcd_rts_settings.probe_margin_x), mesh_max.x)), (TERN(DYNAMIC_LEVELING, lcd_rts_settings.probe_margin_y_front, mesh_min.y)));    
     SERIAL_EOL();
     SERIAL_EOL();
   }
