@@ -493,7 +493,12 @@ void PrintJobRecovery::resume() {
     #endif
 
     #if ENABLED(E3S1PRO_RTS)
-      float z_now = info.flag.raised ? z_raised : resume_pos.z + info.zraise + (lcd_rts_settings.boot_zraise ? Z_AFTER_PROBING : 0);
+      float boot_zraise = 0;
+      if (lcd_rts_settings.boot_zraise) {
+        boot_zraise = Z_AFTER_PROBING;
+        TERN_(HAS_BED_PROBE, if (probe.offset.z < 0) boot_zraise -= probe.offset.z);
+      }
+      float z_now = info.flag.raised ? z_raised : resume_pos.z + info.zraise + boot_zraise;
     #else
       float z_now = info.flag.raised ? z_raised : resume_pos.z;
     #endif
