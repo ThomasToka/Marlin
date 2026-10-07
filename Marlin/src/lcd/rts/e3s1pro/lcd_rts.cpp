@@ -2105,7 +2105,7 @@ void RTSSHOW::RTS_HandleData(void)
         {
           RTS_ResetHotendBed();
           RTS_ResetHeadAndBedSetTemp();
-          thermalManager.fan_speed[0] = 255;
+          thermalManager.set_fan_speed(0, 255);
         }
         else if(recdat.data[0] == 2)
         { // obsolete maybe. back from preheat pages to 21_temp
@@ -2123,7 +2123,7 @@ void RTSSHOW::RTS_HandleData(void)
         }else if (recdat.data[0] == 5) {
           RTS_ResetHotendBed();
           RTS_ResetHeadAndBedSetTemp();
-          thermalManager.fan_speed[0] = 0;
+          thermalManager.set_fan_speed(0, 0);
         }
       }
       break;
@@ -3393,8 +3393,8 @@ void RTSSHOW::RTS_HandleData(void)
       break;
 
     case FanSpeedEnterKey:
-      thermalManager.fan_speed[0] = recdat.data[0];
-      RTS_SndData(thermalManager.fan_speed[0], FAN_SPEED_CONTROL_DATA_VP);
+      thermalManager.set_fan_speed(0, recdat.data[0]);
+      RTS_SndData(fans[0].speed, FAN_SPEED_CONTROL_DATA_VP);
       break;
 
     case VelocityXaxisEnterKey:
@@ -4508,7 +4508,7 @@ void EachMomentUpdate(void)
           RTS_SetOneToVP(FILAMENT_LOAD_ICON_VP);
         }
       #endif
-      rtscheck.RTS_SndData(thermalManager.fan_speed[0] , PRINTER_FAN_SPEED_DATA_VP);
+      rtscheck.RTS_SndData(fans[0].speed, PRINTER_FAN_SPEED_DATA_VP);
     }
   #endif
 
@@ -5128,7 +5128,7 @@ void RTSSHOW::RTS_SendLoadedData(uint8_t loadpart)
   if(loadpart == 255 || loadpart == 1){
     rtscheck.RTS_SndData(thermalManager.temp_hotend[0].celsius, HEAD_CURRENT_TEMP_VP);
     rtscheck.RTS_SndData(thermalManager.temp_bed.celsius, BED_CURRENT_TEMP_VP);
-    rtscheck.RTS_SndData(thermalManager.fan_speed[0] , PRINTER_FAN_SPEED_DATA_VP);
+    rtscheck.RTS_SndData(fans[0].speed, PRINTER_FAN_SPEED_DATA_VP);
     GRID_USED_POINTS_X = lcd_rts_settings.max_points;
     GRID_USED_POINTS_Y = lcd_rts_settings.max_points;
   }
