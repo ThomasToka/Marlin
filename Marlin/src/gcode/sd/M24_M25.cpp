@@ -28,6 +28,7 @@
 #include "../../sd/cardreader.h"
 #include "../../module/printcounter.h"
 #include "../../lcd/marlinui.h"
+#include "../../module/temperature.h"
 
 #if ENABLED(PARK_HEAD_ON_PAUSE)
   #include "../../feature/pause.h"
@@ -50,7 +51,13 @@
   #include "../../module/planner.h"
   #if ENABLED(E3S1PRO_RTS_LASER)
     #include "../../feature/spindle_laser.h"
-  #endif  
+  #endif
+#endif
+
+#include "../../MarlinCore.h" // for startOrResumeJob
+
+#if DISABLED(PARK_HEAD_ON_PAUSE) && ENABLED(HEATER_IDLE_HANDLER) && PAUSE_PARK_NOZZLE_TIMEOUT
+  #define MEDIA_PAUSE_PARK_NOZZLE_TIMEOUT 1
 #endif
 
 /**
@@ -62,6 +69,15 @@
  *     T<time>  Elapsed time since start of print
  */
 void GcodeSuite::M24() {
+  #if MEDIA_PAUSE_PARK_NOZZLE_TIMEOUT
+    // Re-enable any timed-out heaters
+    HOTEND_LOOP() thermalManager.reset_hotend_idle_timer(e);
+    HOTEND_LOOP() thermalManager.wait_for_hotend(e);
+  #endif
+
+  #if ALL(ADVANCED_PAUSE_FANS_PAUSE, HAS_FAN)
+    Fan::all_resume();
+  #endif
 
   #if DGUS_LCD_UI_MKS
     if ((print_job_timer.isPaused() || print_job_timer.isRunning()) && !parser.seen("ST"))
@@ -155,6 +171,16 @@ void GcodeSuite::M25() {
       RTS_ShowPage(40);
       planner.synchronize();
       sdcard_pause_check = false;
+    #endif
+
+    #if ALL(ADVANCED_PAUSE_FANS_PAUSE, HAS_FAN)
+      Fan::all_pause();
+    #endif
+
+    #if MEDIA_PAUSE_PARK_NOZZLE_TIMEOUT
+      // Start the heater idle timers
+      constexpr millis_t nozzle_timeout_ms = SEC_TO_MS(PAUSE_PARK_NOZZLE_TIMEOUT);
+      HOTEND_LOOP() thermalManager.heater_idle[e].start(nozzle_timeout_ms);
     #endif
 
   #endif

@@ -760,9 +760,9 @@ void drawPrepareMenu() {
     if (PVISI(PREPARE_CASE_ZOFF)) itemPrepareOffset(PSCROL(PREPARE_CASE_ZOFF)); // Edit Z-Offset / Babystep / Set Home Offset
   #endif
   #if HAS_PREHEAT
-    if (PVISI(PREPARE_CASE_PLA)) itemPrepare_PLA(PSCROL(PREPARE_CASE_PLA));      // Preheat PLA
+    if (PVISI(PREPARE_CASE_PLA)) itemPrepare_PLA(PSCROL(PREPARE_CASE_PLA));     // Preheat PLA
     #if PREHEAT_COUNT > 1
-      if (PVISI(PREPARE_CASE_ABS)) itemPrepare_ABS(PSCROL(PREPARE_CASE_ABS));    // Preheat ABS
+      if (PVISI(PREPARE_CASE_ABS)) itemPrepare_ABS(PSCROL(PREPARE_CASE_ABS));   // Preheat ABS
     #endif
   #endif
   #if HAS_HOTEND || HAS_HEATED_BED
@@ -988,7 +988,7 @@ void drawTuneMenu() {
   #endif
   #if HAS_FAN
     drawMenuLine(TUNE_CASE_FAN, ICON_FanSpeed);
-    drawEditInteger3(TUNE_CASE_FAN, thermalManager.fan_speed[0]);
+    drawEditInteger3(TUNE_CASE_FAN, fans[0].speed);
   #endif
   #if HAS_ZOFFSET_ITEM
     drawMenuLine(TUNE_CASE_ZOFF, ICON_Zoffset);
@@ -1717,8 +1717,8 @@ void updateVariable() {
   #endif
   #if HAS_FAN
     static uint8_t _fanspeed = 0;
-    const bool _new_fanspeed = _fanspeed != thermalManager.fan_speed[0];
-    if (_new_fanspeed) _fanspeed = thermalManager.fan_speed[0];
+    const bool _new_fanspeed = _fanspeed != fans[0].speed;
+    if (_new_fanspeed) _fanspeed = fans[0].speed;
   #endif
 
   if (checkkey == ID_Tune) {
@@ -1779,7 +1779,7 @@ void updateVariable() {
 
   #if HAS_FAN
     if (_new_fanspeed) {
-      _fanspeed = thermalManager.fan_speed[0];
+      _fanspeed = fans[0].speed;
       drawStatInt(195 + 2 * STAT_CHR_W, 384, _fanspeed);
     }
   #endif
@@ -2030,7 +2030,7 @@ void drawStatusArea(const bool with_update) {
 
   #if HAS_FAN
     dwinIconShow(ICON, ICON_FanSpeed, 187, 383);
-    drawStatInt(195 + 2 * STAT_CHR_W, 384, thermalManager.fan_speed[0]);
+    drawStatInt(195 + 2 * STAT_CHR_W, 384, fans[0].speed);
   #endif
 
   #if HAS_ZOFFSET_ITEM
@@ -2282,7 +2282,7 @@ void hmiSelectFile() {
         // All fans on for Ender-3 v2 ?
         // The slicer should manage this for us.
         //for (uint8_t i = 0; i < FAN_COUNT; i++)
-        //  thermalManager.fan_speed[i] = 255;
+        //  fans[i].speed = 255;
       #endif
 
       _card_percent = 0;
@@ -2686,10 +2686,12 @@ void hmiPrepare() {
         drawMenuIcon(MROWS, ICON_Axis + select_prepare.now - 1);
 
         // Draw "More" icon for sub-menus
-        if (index_prepare < 7) drawMoreIcon(MROWS - index_prepare + 1);
-
-        #if PREHEAT_COUNT > 1
-          if (index_prepare == PREPARE_CASE_ABS) itemPrepare_ABS(MROWS);
+        if (index_prepare < 8) drawMoreIcon(MROWS - index_prepare + 1);
+        #if HAS_PREHEAT
+          if (index_prepare == PREPARE_CASE_PLA) itemPrepare_PLA(MROWS);
+          #if PREHEAT_COUNT > 1
+            if (index_prepare == PREPARE_CASE_ABS) itemPrepare_ABS(MROWS);
+          #endif
         #endif
         #if HAS_HOTEND || HAS_HEATED_BED
           if (index_prepare == PREPARE_CASE_COOL) itemPrepareCool(MROWS);
@@ -2712,7 +2714,7 @@ void hmiPrepare() {
         else
           drawMenuLine(0, ICON_Axis + select_prepare.now - 1);
 
-        if (index_prepare < 7) drawMoreIcon(MROWS - index_prepare + 1);
+        if (index_prepare < 8) drawMoreIcon(MROWS - index_prepare + 1);
 
              if (index_prepare == 6) itemPrepareMove(0);
         else if (index_prepare == 7) itemPrepareDisable(0);
@@ -2877,7 +2879,7 @@ void drawTemperatureMenu() {
   #endif
   #if HAS_FAN
     _TMENU_ICON(TEMP_CASE_FAN);
-    drawEditInteger3(i, thermalManager.fan_speed[0]);
+    drawEditInteger3(i, fans[0].speed);
   #endif
   #if HAS_PREHEAT
     // PLA/ABS items have submenus
@@ -3108,7 +3110,7 @@ void hmiTemperature() {
       #if HAS_FAN
         case TEMP_CASE_FAN:
           checkkey = ID_FanSpeed;
-          hmiValues.fanSpeed = thermalManager.fan_speed[0];
+          hmiValues.fanSpeed = fans[0].speed;
           drawEditInteger3(3, hmiValues.fanSpeed, true);
           encoderRate.enabled = true;
           break;
@@ -3616,13 +3618,13 @@ void hmiAdvSet() {
           break;
       #endif
 
-      #if HAS_HOTEND
+      #if ENABLED(PIDTEMP)
         case ADVSET_CASE_HEPID:
           thermalManager.PID_autotune(ui.material_preset[0].hotend_temp, H_E0, 10, true);
           break;
       #endif
 
-      #if HAS_HEATED_BED
+      #if ENABLED(PIDTEMPBED)
         case ADVSET_CASE_BEDPID:
           thermalManager.PID_autotune(ui.material_preset[0].bed_temp, H_BED, 10, true);
           break;
@@ -3835,7 +3837,7 @@ void hmiTune() {
       #if HAS_FAN
         case TUNE_CASE_FAN: // Fan speed
           checkkey = ID_FanSpeed;
-          hmiValues.fanSpeed = thermalManager.fan_speed[0];
+          hmiValues.fanSpeed = fans[0].speed;
           drawEditInteger3(TUNE_CASE_FAN + MROWS - index_tune, hmiValues.fanSpeed, true);
           encoderRate.enabled = true;
           break;
